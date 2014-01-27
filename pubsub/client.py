@@ -72,7 +72,7 @@ class Client :
             try :
                 msg = pubsub.jsonish.parse_bytes(msg)
 
-            except ValueError as error :
+            except pubsub.jsonish.ParseError as error :
                 log.error("%s: invalid message: %s", addr, error)
 
             # process

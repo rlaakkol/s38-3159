@@ -71,9 +71,15 @@ def parse_list (c, iter) :
     """
 
     while True :
-        item, c = parse_item(iter)
+        c = parse_next(iter)
 
-        yield item
+        if c == ']' :
+            break
+
+        item, c = parse_item(c, iter)
+        
+        if item is not None :
+            yield item
 
         if c == ',' :
             continue
@@ -93,12 +99,18 @@ def parse_dict (c, iter) :
     """
 
     while True :
-        key, c = parse_item(iter)
+        c = parse_next(iter)
+
+        if c == '}' :
+            break
+
+        key, c = parse_item(c, iter)
         
         if c != ':' :
             raise ParseError("invalid key-sep: {c}".format(c=c))
 
-        value, c = parse_item(iter)
+        c = parse_next(iter)
+        value, c = parse_item(c, iter)
             
         yield key, value
 
@@ -111,12 +123,10 @@ def parse_dict (c, iter) :
         else :
             raise ParseError("invalid keyval-sep: {c}".format(c=c))
 
-def parse_item (iter) :
+def parse_item (c, iter) :
     """
         Parse iterable -> value        
     """
-
-    c = parse_next(iter)
 
     if c is None :
         val = None
@@ -151,13 +161,20 @@ def parse (str) :
         'foo'
         >>> parse("1234")
         1234
+        >>> parse("[]")
+        []
         >>> parse("['foo', 'bar']")
         ['foo', 'bar']
+        >>> parse("{}")
+        {}
         >>> parse("{'foo': 'bar'}")
         {'foo': 'bar'}
     """
 
-    val, c = parse_item(iter(str))
+    i = iter(str)
+    c = parse_next(i)
+
+    val, c = parse_item(c, i)
 
     return val
 
@@ -246,7 +263,7 @@ def build_item (item) :
 def build_str (item) :
     return ''.join(build_item(item))
 
-def build_buf (item) :
+def build_bytes (item) :
     return build_str(item).encode('ascii')
 
 if __name__ == '__main__':

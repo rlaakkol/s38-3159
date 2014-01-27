@@ -4,6 +4,7 @@ import argparse
 import logging; log = logging.getLogger('ps-client')
 
 import pubsub.args
+import pubsub.client
 
 def main (args) :
     """
@@ -14,9 +15,9 @@ def main (args) :
 
     pubsub.args.parser(parser)
     
-    parser.add_argument('-s', '--server-ip', metavar='IP',
+    parser.add_argument('-s', '--server-ip', metavar='IP', required=True,
             help="Publish server address")
-    parser.add_argument('-p', '--server-port', metavar='PORT',
+    parser.add_argument('-p', '--server-port', metavar='PORT', required=True,
             help="Publish server port")
     parser.add_argument('sensors', metavar='SENSOR', nargs='*',
             help="Sensors to subscribe to")
@@ -25,9 +26,12 @@ def main (args) :
     
     pubsub.args.apply(args)
 
-    log.info("server=%s:%s, sensors=%s", args.server_ip, args.server_port, args.sensors)
+    # client
+    client = pubsub.client.Client(args.server_ip, args.server_port)
 
-    return 0
+    client.subscribe(args.sensors)
+
+    return client.main()
 
 if __name__ == '__main__':
     pubsub.args.main(main)

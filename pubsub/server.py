@@ -40,6 +40,8 @@ class Server :
             Process a publish message from a sensor.
         """
 
+        sensor = msg['dev_id']
+
         # fix brain damage
         msg['seq_no'] = pubsub.jsonish.parse(msg['seq_no'])
         msg['ts'] = pubsub.jsonish.parse(msg['ts'])
@@ -50,8 +52,10 @@ class Server :
         
         log.info("%s: %s", addr, msg)
 
-        for client in self._clients :
-            self.client(client, msg)
+        for client, sensors in self._clients.items() :
+            # either empty list, or list containing sensor id
+            if not sensors or sensor in sensors :
+                self.client(client, msg)
 
     def subscribe (self, addr, msg) :
         """

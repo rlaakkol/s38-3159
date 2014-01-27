@@ -33,12 +33,25 @@ class Server :
         self._subscribe = udp_listen(subscribe_port)
         log.info("Listening for subscribe messages on %s", self._subscribe)
 
+        self._clients = { }
+
     def publish (self, addr, msg) :
         """
             Process a publish message from a sensor.
         """
 
+        # fix brain damage
+        msg['seq_no'] = pubsub.jsonish.parse(msg['seq_no'])
+        msg['ts'] = pubsub.jsonish.parse(msg['ts'])
+        msg['data_size'] = pubsub.jsonish.parse(msg['data_size'])
+
+        if msg['dev_id'].startswith('gps_') :
+            msg['sensor_data'] = pubsub.jsonish.parse(msg['sensor_data'])
+        
         log.info("%s: %s", addr, msg)
+
+        for client in self._clients :
+            self.client(client, msg)
 
     def subscribe (self, addr, msg) :
         """
@@ -46,6 +59,19 @@ class Server :
         """
 
         log.info("%s: %s", addr, msg)
+
+        self._clients[addr] = msg
+
+    def client (self, addr, msg) :
+        """
+            Send client message.
+        """
+            
+        log.info("%s: %s", addr, msg)
+        
+        buf = pubsub.jsonish.build_bytes(msg)
+
+        self._subscribe.sendto(buf, addr)
 
     def main (self) :
         """
@@ -70,8 +96,9 @@ class Server :
                 try :
                     msg = pubsub.jsonish.parse_bytes(msg)
 
-                except ValueError as error :
+                except pubsub.jsonish.ParseError as error :
                     log.error("%s: invalid message: %s", addr, error)
+                    continue
                 
                 # process
                 if sock == self._publish :

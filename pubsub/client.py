@@ -30,16 +30,34 @@ class Client :
         self._server = udp_connect(server_ip, server_port)
         log.info("Connected to server on %s", self._server)
 
+    def server (self, msg) :
+        """
+            Send a message to the server.
+        """
+
+        buf = pubsub.jsonish.build_bytes(msg)
+
+        log.debug("%s", buf)
+
+        self._server.send(buf)
+
     def subscribe (self, sensors) :
         """
             Send a subscribe message to the server.
         """
 
-        log.info("%s", sensors)
+        msg = list(sensors)
 
-        msg = pubsub.jsonish.build_buf(list(sensors))
+        log.info("%s", msg)
+        
+        self.server(msg)
 
-        self._server.send(msg)
+    def publish (self, msg) :
+        """
+            Process a publish from the server.
+        """
+
+        log.info("%s", msg)
 
     def main (self) :
         """
@@ -58,4 +76,4 @@ class Client :
                 log.error("%s: invalid message: %s", addr, error)
 
             # process
-            self.subscribe(addr, msg)
+            self.publish(msg)

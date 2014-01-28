@@ -31,7 +31,8 @@ def main (args) :
 
     client.subscribe(args.sensors)
 
-    return client.main()
+    for msg in client.loop() :
+        print(msg)
 
 if __name__ == '__main__':
     pubsub.args.main(main)

@@ -59,9 +59,11 @@ class Client :
 
         log.info("%s", msg)
 
-    def main (self) :
+        return msg
+
+    def loop (self) :
         """
-            Mainloop
+            Mainloop, yielding recv'd messages.
         """
 
         while True :
@@ -76,4 +78,4 @@ class Client :
                 log.error("%s: invalid message: %s", addr, error)
 
             # process
-            self.publish(msg)
+            yield self.publish(msg)

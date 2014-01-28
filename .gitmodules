@@ -1,0 +1,3 @@
+[submodule "SensorTrafficGenerator"]
+	path = SensorTrafficGenerator
+	url = https://github.com/vr000m/SensorTrafficGenerator.git

@@ -1,6 +1,7 @@
 .*.swp
 .*.swo
 *.pyc
+*.png
 
 __pycache__/
 

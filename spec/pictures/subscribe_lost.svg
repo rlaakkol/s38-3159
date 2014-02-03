@@ -1,0 +1,107 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+ width="600px" height="477px"
+ viewBox="0 0 600 477"
+ xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"
+ stroke-width="1" text-rendering="geometricPrecision">
+<polygon fill="white" points="133,7 165,7 165,16 133,16"/>
+<text x="150" y="16" textLength="31" font-family="Helvetica" font-size="12" fill="black" text-anchor="middle">
+
+Client
+</text>
+<polygon fill="white" points="431,7 467,7 467,16 431,16"/>
+<text x="450" y="16" textLength="35" font-family="Helvetica" font-size="12" fill="black" text-anchor="middle">
+
+Server
+</text>
+<line x1="150" y1="22" x2="150" y2="65" stroke="black"/>
+<line x1="450" y1="22" x2="450" y2="65" stroke="black"/>
+<line x1="150" y1="33" x2="450" y2="48" stroke="black"/>
+<polygon fill="black" points="450,48 440,54 440,42"/>
+<polygon fill="white" points="256,30 343,30 343,39 256,39"/>
+<text x="257" y="39" textLength="85" font-family="Helvetica" font-size="12" fill="black">
+subscribe-query
+</text>
+<line x1="150" y1="65" x2="150" y2="108" stroke="black"/>
+<line x1="450" y1="65" x2="450" y2="108" stroke="black"/>
+<line x1="450" y1="76" x2="225" y2="91" stroke="black"/>
+<line x1="221" y1="87" x2="229" y2="95" stroke="black"/>
+<line x1="229" y1="87" x2="221" y2="95" stroke="black"/>
+<polygon fill="white" points="231,73 368,73 368,82 231,82"/>
+<text x="232" y="82" textLength="135" font-family="Helvetica" font-size="12" fill="black">
+subscribe-queryresponse
+</text>
+<line x1="150" y1="108" x2="150" y2="140" stroke="black"/>
+<line x1="450" y1="108" x2="450" y2="140" stroke="black"/>
+<line x1="75" y1="113" x2="525" y2="113" stroke="black" stroke-dasharray="2,2"/>
+<polygon fill="white" points="262,116 337,116 337,125 262,125"/>
+<text x="263" y="125" textLength="73" font-family="Helvetica" font-size="12" fill="black">
+Client timeout
+</text>
+<line x1="150" y1="140" x2="150" y2="183" stroke="black"/>
+<line x1="450" y1="140" x2="450" y2="183" stroke="black"/>
+<line x1="150" y1="151" x2="450" y2="166" stroke="black"/>
+<polygon fill="black" points="450,166 440,172 440,160"/>
+<polygon fill="white" points="256,148 343,148 343,157 256,157"/>
+<text x="257" y="157" textLength="85" font-family="Helvetica" font-size="12" fill="black">
+subscribe-query
+</text>
+<line x1="150" y1="183" x2="150" y2="226" stroke="black"/>
+<line x1="450" y1="183" x2="450" y2="226" stroke="black"/>
+<line x1="450" y1="194" x2="150" y2="209" stroke="black"/>
+<polygon fill="black" points="150,209 160,215 160,203"/>
+<polygon fill="white" points="231,191 368,191 368,200 231,200"/>
+<text x="232" y="200" textLength="135" font-family="Helvetica" font-size="12" fill="black">
+subscribe-queryresponse
+</text>
+<line x1="150" y1="226" x2="150" y2="269" stroke="black"/>
+<line x1="450" y1="226" x2="450" y2="269" stroke="black"/>
+<line x1="150" y1="237" x2="450" y2="252" stroke="black"/>
+<polygon fill="black" points="450,252 440,258 440,246"/>
+<polygon fill="white" points="149,234 450,234 450,243 149,243"/>
+<text x="150" y="243" textLength="299" font-family="Helvetica" font-size="12" fill="black">
+subscribe-&#x155;equest, seq: 1, payload: ['sensor1', 'sensor5']
+</text>
+<line x1="150" y1="269" x2="150" y2="312" stroke="black"/>
+<line x1="450" y1="269" x2="450" y2="312" stroke="black"/>
+<line x1="450" y1="280" x2="225" y2="295" stroke="black"/>
+<line x1="221" y1="291" x2="229" y2="299" stroke="black"/>
+<line x1="229" y1="291" x2="221" y2="299" stroke="black"/>
+<polygon fill="white" points="92,277 506,277 506,286 92,286"/>
+<text x="93" y="286" textLength="412" font-family="Helvetica" font-size="12" fill="black">
+subscribe-response, ackseq: 1, seq: 1, payload: {'sensor1': 1, 'sensor2': 0, ...}
+</text>
+<line x1="150" y1="312" x2="150" y2="344" stroke="black"/>
+<line x1="450" y1="312" x2="450" y2="344" stroke="black"/>
+<line x1="75" y1="317" x2="525" y2="317" stroke="black" stroke-dasharray="2,2"/>
+<polygon fill="white" points="262,320 337,320 337,329 262,329"/>
+<text x="263" y="329" textLength="73" font-family="Helvetica" font-size="12" fill="black">
+Client timeout
+</text>
+<line x1="150" y1="344" x2="150" y2="387" stroke="black"/>
+<line x1="450" y1="344" x2="450" y2="387" stroke="black"/>
+<line x1="150" y1="355" x2="450" y2="370" stroke="black"/>
+<polygon fill="black" points="450,370 440,376 440,364"/>
+<polygon fill="white" points="149,352 450,352 450,361 149,361"/>
+<text x="150" y="361" textLength="299" font-family="Helvetica" font-size="12" fill="black">
+subscribe-&#x155;equest, seq: 1, payload: ['sensor1', 'sensor5']
+</text>
+<line x1="150" y1="387" x2="150" y2="430" stroke="black"/>
+<line x1="450" y1="387" x2="450" y2="430" stroke="black"/>
+<line x1="450" y1="398" x2="150" y2="413" stroke="black"/>
+<polygon fill="black" points="150,413 160,419 160,407"/>
+<polygon fill="white" points="94,395 504,395 504,404 94,404"/>
+<text x="95" y="404" textLength="408" font-family="Helvetica" font-size="12" fill="black">
+subscribe-response, ackseq: 1, seq: 1 payload: {'sensor1': 1, 'sensor2': 0, ...}
+</text>
+<line x1="150" y1="430" x2="150" y2="462" stroke="black"/>
+<line x1="450" y1="430" x2="450" y2="462" stroke="black"/>
+<line x1="75" y1="435" x2="525" y2="435" stroke="black" stroke-dasharray="2,2"/>
+<polygon fill="white" points="232,438 366,438 366,447 232,447"/>
+<text x="233" y="447" textLength="132" font-family="Helvetica" font-size="12" fill="black">
+Ready to start publishing
+</text>
+<line x1="150" y1="441" x2="150" y2="477" stroke="black"/>
+<line x1="450" y1="441" x2="450" y2="477" stroke="black"/>
+</svg>

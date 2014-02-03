@@ -1,0 +1,18 @@
+# Normal publish with on/off sensors
+msc {
+ arcgradient = 15,
+ wordwraparcs = "on";
+
+ a [label="Client"],b [label="Server"];
+ --- [label="Subscribed to s1, s2 (on/off) and s3 (cam)"];
+a <= b [label="publish,\npayload: ['s1': <state>]"];
+a <= b [label="publish,\npayload: ['s3': <state>]"];
+a <= b [label="publish /w ackthis, payload: ['s2': <state>]"];
+a => b [label="publish-ack"],
+a <= b [label="publish,\npayload: ['s3': <state>]"];
+--- [label="timeout since last ackthis"];
+a <= b [label="publish /w ackthis, payload: ['s1': <state>, 's2': <state>]"];
+a => b [label="publish-ack"],
+a <= b [label="publish,\npayload: ['s3': <state>]"];
+
+}

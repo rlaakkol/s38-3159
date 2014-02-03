@@ -1,0 +1,13 @@
+# Normal subscribe with initial sensor query
+msc {
+ arcgradient = 15,
+ wordwraparcs = "on";
+
+ a [label="Client"],b [label="Server"];
+
+ a => b [label="subscribe-query"];
+ a <= b [label="subscribe-queryresponse"];
+ a => b [label="subscribe-request, seq: 1, payload: ['sensor1', 'sensor5']"];
+ a <= b [label="subscribe-response, ackseq: 1, seq:1 payload: {'sensor1': 1, 'sensor2': 0, ...}"];
+ --- [label="Ready to start publishing"];
+}

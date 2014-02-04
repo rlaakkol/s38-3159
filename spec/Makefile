@@ -1,3 +1,6 @@
+doc.pdf: \
+	doc-cover.tex headerfmt.txt messages.tex \
+	figures/subscribe_normal.pdf figures/subscribe_lost.pdf figures/publish_normal.pdf
 
 slides.pdf: \
 	headerfmt.txt messages.tex \

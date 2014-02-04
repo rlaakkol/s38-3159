@@ -9,10 +9,10 @@ a <= b [label="publish, seq: 1, payload: {'s1': <state>}"];
 a <= b [label="publish, seq: 1, payload: {'s3': <state>}"];
 a <= b [label="publish /w ackthis, seq: 2, payload: {'s2': <state>}"];
 a => b [label="publish-ack, ackseq: 2, seq: 3"],
-a <= b [label="publish, seq: 2, payload: {'s3': <state>}"];
+a <= b [label="\npublish, seq: 2, payload: {'s3': <state>}"];
 --- [label="timeout since last ackthis"];
 a <= b [label="publish /w ackthis, seq: 3, payload: {'s1': <state>, 's2': <state>}"];
 a => b [label="publish-ack, ackseq: 3, seq: 5"],
-a <= b [label="publish, seq: 3, payload: {'s3': <state>}"];
+a <= b [label="\npublish, seq: 3, payload: {'s3': <state>}"];
 
 }

@@ -1,0 +1,14 @@
+# Normal subscribe with initial sensor query
+msc {
+ arcgradient = 15,
+ wordwraparcs = "on";
+
+ a [label="Client"],b [label="Server"];
+
+ a => b [label="teardown"];
+ --- [label="Server clears state"];
+ a x- b [label="teardown-ack"];
+
+ a => b [label="teardown"];
+ a <= b [label="teardown-ack"];
+}

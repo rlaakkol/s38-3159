@@ -6,6 +6,8 @@
 import pubsub.jsonish
 import pubsub.protocol
 
+from pubsub.protocol import Message
+
 import logging; log = logging.getLogger('pubsub.client')
 
 class Client :
@@ -18,7 +20,7 @@ class Client :
             Send a subscribe message to the server.
         """
 
-        msg = list(sensors)
+        msg = Message(Message.SUBSCRIBE, payload=list(sensors))
 
         log.info("%s", msg)
         
@@ -29,9 +31,11 @@ class Client :
             Process a publish from the server.
         """
 
-        log.info("%s", msg)
+        sensors = msg.payload
 
-        return msg
+        log.info("%s", sensors)
+
+        return sensors
 
     def __iter__ (self) :
         """
@@ -40,4 +44,8 @@ class Client :
 
         for msg, addr in self.server :
             # process
-            yield self.publish(msg)
+            if msg.type == Message.PUBLISH :
+                yield self.publish(msg)
+
+            else :
+                log.warning("Received unknown message type from server: %s", msg)

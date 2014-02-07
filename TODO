@@ -1,0 +1,5 @@
+# Specification
+
+* Header magic
+* Header endianness
+* Header flags field

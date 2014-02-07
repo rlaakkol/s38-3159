@@ -6,6 +6,8 @@ import pubsub.jsonish
 import pubsub.protocol
 import pubsub.sensors
 
+from pubsub.protocol import Message
+
 import logging; log = logging.getLogger('pubsub.server')
 import select
 
@@ -41,19 +43,24 @@ class Server :
         
         log.info("%s: %s", addr, msg)
 
+        publish = Message(Message.PUBLISH, payload=msg)
+
         for client_addr, sensors in self._clients.items() :
             # either empty list, or list containing sensor id
             if not sensors or sensor in sensors :
-                self.clients(msg, client_addr)
+                self.clients(publish, client_addr)
 
     def subscribe (self, msg, addr) :
         """
             Process a subscribe message from a client.
         """
+        
+        # XXX: validate payload
+        sensors = msg.payload
 
-        log.info("%s: %s", addr, msg)
+        log.info("%s: %s", addr, sensors)
 
-        self._clients[addr] = msg
+        self._clients[addr] = sensors
 
     def __call__ (self) :
         """
@@ -78,7 +85,10 @@ class Server :
 
                 elif sock == self.clients :
                     for msg, addr in self.clients :
-                        self.subscribe(msg, addr)
+                        if msg.type == Message.SUBSCRIBE :
+                            self.subscribe(msg, addr)
+                        else :
+                            log.warning("Unhandled message type from client: %s", msg)
 
                 else :
                     log.error("%s: unhandled message: %s", addr, msg)

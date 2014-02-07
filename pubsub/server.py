@@ -3,39 +3,28 @@
 """
 
 import pubsub.jsonish
+import pubsub.protocol
+import pubsub.sensors
 
 import logging; log = logging.getLogger('pubsub.server')
 import select
-import socket
-
-def udp_listen (port, host=None) :
-    try :
-        ai = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM, flags=socket.AI_PASSIVE)
-    except socket.gaierror as error :
-        log.error("%s:%s: %s", port, host, error)
-        raise
-
-    for family, type, proto, canonname, sockaddr in ai :
-        log.debug("family=%s type=%s sockaddr=%s", family, type, sockaddr)
-        
-        sock = socket.socket(family, type, proto)
-        sock.bind(sockaddr)
-
-        return sock
 
 class Server :
-    MSGSIZE = 1500
+    """
+        Server state/logic implementation.
+    """
 
     def __init__ (self, publish_port, subscribe_port) :
-        self._publish = udp_listen(publish_port)
-        log.info("Listening for publish messages on %s", self._publish)
+        self.sensors = pubsub.sensors.Sensors.listen(publish_port, nonblocking=True)
+        log.info("Listening for sensor publish messages on %s", self.sensors)
 
-        self._subscribe = udp_listen(subscribe_port)
-        log.info("Listening for subscribe messages on %s", self._subscribe)
-
+        self.clients = pubsub.protocol.Transport.listen(subscribe_port, nonblocking=True)
+        log.info("Listening for client subscribe messages on %s", self.clients)
+        
+        # socket
         self._clients = { }
 
-    def publish (self, addr, msg) :
+    def publish (self, msg, addr) :
         """
             Process a publish message from a sensor.
         """
@@ -52,12 +41,12 @@ class Server :
         
         log.info("%s: %s", addr, msg)
 
-        for client, sensors in self._clients.items() :
+        for client_addr, sensors in self._clients.items() :
             # either empty list, or list containing sensor id
             if not sensors or sensor in sensors :
-                self.client(client, msg)
+                self.clients(msg, client_addr)
 
-    def subscribe (self, addr, msg) :
+    def subscribe (self, msg, addr) :
         """
             Process a subscribe message from a client.
         """
@@ -66,18 +55,7 @@ class Server :
 
         self._clients[addr] = msg
 
-    def client (self, addr, msg) :
-        """
-            Send client message.
-        """
-            
-        log.info("%s: %s", addr, msg)
-        
-        buf = pubsub.jsonish.build_bytes(msg)
-
-        self._subscribe.sendto(buf, addr)
-
-    def main (self) :
+    def __call__ (self) :
         """
             Mainloop
         """
@@ -85,7 +63,7 @@ class Server :
         poll = select.poll()
         polling = { }
 
-        for socket in [self._publish, self._subscribe] :
+        for socket in [self.sensors, self.clients] :
             poll.register(socket, select.POLLIN)
             polling[socket.fileno()] = socket
 
@@ -93,23 +71,14 @@ class Server :
             for fd, event in poll.poll() :
                 sock = polling[fd]
 
-                # recv -> bytes, (sockaddr)
-                msg, addr = sock.recvfrom(self.MSGSIZE)
-                
-                # parse
-                try :
-                    msg = pubsub.jsonish.parse_bytes(msg)
-
-                except pubsub.jsonish.ParseError as error :
-                    log.error("%s: invalid message: %s", addr, error)
-                    continue
-                
                 # process
-                if sock == self._publish :
-                    self.publish(addr, msg)
+                if sock == self.sensors:
+                    for msg, addr in self.sensors :
+                        self.publish(msg, addr)
 
-                elif sock == self._subscribe :
-                    self.subscribe(addr, msg)
+                elif sock == self.clients :
+                    for msg, addr in self.clients :
+                        self.subscribe(msg, addr)
 
                 else :
                     log.error("%s: unhandled message: %s", addr, msg)

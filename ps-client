@@ -31,7 +31,7 @@ def main (args) :
 
     client.subscribe(args.sensors)
 
-    for msg in client.loop() :
+    for msg in client :
         print(msg)
 
 if __name__ == '__main__':

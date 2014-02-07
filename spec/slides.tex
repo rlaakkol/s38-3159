@@ -92,6 +92,9 @@
 \begin{itemize}
 	\item Subscription message size grows linearly with sensor count
     \item No provision for retransmitting lost camera data
+    \begin{itemize}
+    	\item That wouldn't be real-time enough! :)
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -100,6 +103,7 @@
 	\item Optimize subscribe for reliability
     \item Keepalive timeouts for detecting dropped clients
     \item Handle dropped \textbf{teardown-ack}s
+    \item Consider server restarts
 \end{itemize}
 \end{frame}
 

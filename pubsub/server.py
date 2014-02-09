@@ -58,7 +58,7 @@ class ServerClient :
         self.transport = transport
         self.addr = addr
 
-        self.sensors = False
+        self.sensors = set()
 
     def recv (self, msg) :
         """
@@ -84,7 +84,7 @@ class ServerClient :
 
         elif not sensors :
             # unsubscribe from all sensors
-            self.sensors = False
+            self.sensors = set()
         
         else :
             # subscribe to given sensors

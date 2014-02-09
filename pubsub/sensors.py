@@ -31,5 +31,6 @@ class Transport (pubsub.udp.Socket) :
                 continue
 
             log.debug("%s: %s", addr, msg)
-
-            yield msg, addr
+        
+            # drop addr, as it has no meaning for sensors; every update is sent on a separate socket..
+            yield msg

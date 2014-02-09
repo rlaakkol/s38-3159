@@ -22,6 +22,9 @@
 [PEP8](http://www.python.org/dev/peps/pep-0008/)
 
 *   Indent 4-space
+
+        :set tabstop=4 shiftwidth=4 expandtab
+
 *   Function `def` has extra whitespace before argument list
 
         def foo (bar) :

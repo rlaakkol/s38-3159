@@ -41,8 +41,8 @@ class Transport (pubsub.udp.Socket) :
     MAGIC = 0x42
     HEADER = struct.Struct("! BBH I I")
     
-    # XXX: support maximum-size UDP messages
-    #SIZE = 2**16
+    # support maximum-size UDP messages
+    SIZE = 2**16
 
     def parse (self, buf) :
         # header

@@ -21,15 +21,24 @@ class ServerSensor :
         self.server = server
         self.dev_id = dev_id
 
-    def update (self, update) :
+    def recv (self, msg) :
         """
-            Send a publish message to all subscribed clients for this ServerSensor.
+            Process sensor update, updating all clients that may be subsribed.
         """
 
-        # publish
+        # reprocess
+        update = {
+                'dev_id':       msg['dev_id'],
+                'sensor_data':  msg['sensor_data'],
+                'seq_no':       pubsub.jsonish.parse(msg['seq_no']),
+                'ts':           pubsub.jsonish.parse(msg['ts']),
+                # data_size
+        }
+
+        # update clients
         log.info("%s: %s", self, update)
 
-        for client in self.server.clients.values() :
+        for client in self.server.sensor_clients(self) :
             client.sensor_update(self, update)
         
     def __str__ (self) :
@@ -46,6 +55,17 @@ class ServerClient :
         self.addr = addr
 
         self.sensors = False
+
+    def recv (self, msg) :
+        """
+            Process a message from the client.
+        """
+
+        if msg.type == Message.SUBSCRIBE :
+            return self.recv_subscribe(msg.payload)
+
+        else :
+            log.warning("%s: Unhandled message type: %s", self, msg)
 
     def recv_subscribe (self, sensors) :
         """
@@ -68,11 +88,10 @@ class ServerClient :
 
     def sensor_update (self, sensor, update) :
         """
-            Publish sensor update, if subscribed.
+            Process sensor update.
         """
 
-        if self.sensors is True or str(sensor) in self.sensors :
-            self.send_publish(update)
+        self.send_publish(update)
 
     def send_publish (self, update) :
         """
@@ -119,14 +138,6 @@ class Server :
 
         sensor_id = msg['dev_id']
 
-        # fix brain damage
-        msg['seq_no'] = pubsub.jsonish.parse(msg['seq_no'])
-        msg['ts'] = pubsub.jsonish.parse(msg['ts'])
-        msg['data_size'] = pubsub.jsonish.parse(msg['data_size'])
-
-        if msg['dev_id'].startswith('gps_') :
-            msg['sensor_data'] = pubsub.jsonish.parse(msg['sensor_data'])
-
         # maintain sensor state
         if sensor_id in self.sensors :
             sensor = self.sensors[sensor_id]
@@ -135,11 +146,20 @@ class Server :
             
             log.info("%s: new sensor", sensor)
         
-        sensor.update(msg)
-        
-    def subscribe (self, msg, addr) :
+        sensor.recv(msg)
+    
+    def sensor_clients (self, sensor) :
         """
-            Process a subscribe message from a client.
+            Yield all ServerClients subscribed to given sensor.
+        """
+
+        for client in self.clients.values() :
+            if client.sensors is True or str(sensor) in client.sensors :
+                yield client
+
+    def client (self, msg, addr) :
+        """
+            Process a message from a client.
         """
 
         # maintain client state
@@ -148,14 +168,11 @@ class Server :
         else :
             client = self.clients[addr] = ServerClient(self, self.client_port, addr)
         
-        # XXX: validate payload
-        sensors = msg.payload
-        
         try :
-            client.recv_subscribe(sensors)
+            client.recv(msg)
         except Exception as ex :
             # drop message...
-            log.exception("ServerClient.subscribe failed: %s", ex)
+            log.exception("ServerClient.recv failed: %s", ex)
 
     def __call__ (self) :
         """
@@ -180,10 +197,7 @@ class Server :
 
                 elif sock == self.client_port :
                     for msg, addr in sock :
-                        if msg.type == Message.SUBSCRIBE :
-                            self.subscribe(msg, addr)
-                        else :
-                            log.warning("Unhandled message type from client: %s", msg)
+                        self.client(msg, addr)
 
                 else :
                     log.error("%s: unhandled message: %s", addr, msg)

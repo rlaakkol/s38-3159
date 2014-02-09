@@ -12,3 +12,10 @@
 * string `"` quotes
 * string `\` escapes
 
+## pubsub.server
+* log sensor data
+* log client messages (XXX: publish only?)
+
+## pubsub.client
+* log sensor data from publish messages
+

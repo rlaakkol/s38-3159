@@ -19,6 +19,10 @@ class Message (object) :
         TEARDOWN:   'T',
     }
 
+    @classmethod
+    def type_name (cls, type) :
+        return cls.TYPE_NAMES.get(type, '?')
+
     def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None, addr=None) :
         self.type = type
         self.flags = flags
@@ -31,7 +35,7 @@ class Message (object) :
 
     @property
     def type_str (self) :
-        return self.TYPE_NAMES.get(self.type, '?')
+        return Message.type_name(self.type)
 
     def __str__ (self) :
         return "{self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)

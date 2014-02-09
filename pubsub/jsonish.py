@@ -150,6 +150,7 @@ def parse_item (c, iter) :
 
     if c is None :
         val = None
+        c1 = None
 
     elif c == "'" :
         val = ''.join(parse_str(c, iter))

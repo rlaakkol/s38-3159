@@ -27,6 +27,8 @@ def parse_str (c0, iter) :
         >>> list(parse_str("'", iter("foo'")))
         ['f', 'o', 'o']
     """
+    ESC = {'\\': '\\', "'": "'", '"': '"', 'a': '\a', 'b': '\b', 'f': '\f', 
+        'n': '\n', 'r': '\r', 't': '\t', 'v': '\v'}
 
     while True :
         c = next(iter, None)
@@ -36,7 +38,24 @@ def parse_str (c0, iter) :
 
         elif c == c0 :
             return
-        else :
+
+        elif c == '\\' :
+            c = next(iter, None)
+            if c == 'x' :
+                c1 = next(iter, None)
+                c2 = next(iter, None)
+                if c1 and c2 :
+                    yield chr(int(c1 + c2, 16))
+                else :
+                    raise ParseError("truncated-string-escape")
+
+            elif c in ESC :
+                yield ESC[c]
+
+            else :
+                raise ParseError("invalid-escape-sequence: {c}".format(c=c))
+
+        else:
             yield c
 
 def parse_number (c, iter) :
@@ -54,6 +73,7 @@ def parse_number (c, iter) :
 
         elif c == '.' or c.isdigit() :
             str += c
+
         else :
             break
 
@@ -154,7 +174,7 @@ def parse_item (c, iter) :
     return val, c1
 
 def parse (str) :
-    """
+    r"""
         Parse str -> value
 
         >>> parse("'foo'")
@@ -169,6 +189,8 @@ def parse (str) :
         {}
         >>> parse("{'foo': 'bar'}")
         {'foo': 'bar'}
+        >>> parse(r"'\x0e'")
+        '\x0e'
     """
 
     i = iter(str)

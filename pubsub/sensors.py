@@ -11,6 +11,10 @@ class Transport (pubsub.udp.Socket) :
     """
         Receiving sensor data updates from sensors.
     """
+    
+    # Maximum message length is 1667 bytes of sensor_data for camera, which can expand up to 4x = 6667 bytes,
+    # plus other message overhead
+    SIZE = 8000
 
     def __iter__ (self) :
         """

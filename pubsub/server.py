@@ -21,19 +21,17 @@ class ServerSensor :
         self.server = server
         self.dev_id = dev_id
 
-        self.clients = set()
-
-    def publish (self, msg) :
+    def update (self, update) :
         """
             Send a publish message to all subscribed clients for this ServerSensor.
         """
 
         # publish
-        log.info("%s: %s", self, msg)
-        
-        for client in self.clients | self.server.sensors_clients :
-            client.send_publish(self, msg)
+        log.info("%s: %s", self, update)
 
+        for client in self.server.clients.values() :
+            client.sensor_update(self, update)
+        
     def __str__ (self) :
         return self.dev_id
 
@@ -47,8 +45,8 @@ class ServerClient :
         self.transport = transport
         self.addr = addr
 
-        self.sensors = set()
-    
+        self.sensors = False
+
     def recv_subscribe (self, sensors) :
         """
             Process a subscription message from the client.
@@ -58,40 +56,40 @@ class ServerClient :
 
         if sensors is True :
             # subscribe to all sensors
-            for sensor in self.sensors :
-                self.sensors.clients.remove(self)
+            self.sensors = True
 
-            self.server.sensors_clients.add(self)
-
+        elif not sensors :
+            # unsubscribe from all sensors
+            self.sensors = False
+        
         else :
-            # lookup ServerSensors
-            sensors = set(self.server.lookup_sensors(sensors))
+            # subscribe to given sensors
+            self.sensors = set(sensors)
 
-            # subscribe to specific sensors
-            self.server.sensors_clients.discard(self)
-
-            for sensor in self.sensors - sensors :
-                sensor.clients.remove(self)
-
-            for sensor in sensors - self.sensors :
-                sensor.clients.add(self)
-
-            self.sensors = sensors
-
-    def send_publish (self, sensor, msg) :
+    def sensor_update (self, sensor, update) :
         """
-            Send a publish message for the given ServerSensor.
+            Publish sensor update, if subscribed.
+        """
+
+        if self.sensors is True or str(sensor) in self.sensors :
+            self.send_publish(update)
+
+    def send_publish (self, update) :
+        """
+            Send a publish message for the given sensor update.
         """
 
         # publish
-        log.info("%s: %s: %s", self, sensor, msg)
+        log.info("%s: %s", self, update)
 
-        publish = Message(Message.PUBLISH, payload=msg)
-        
-        self.send(publish)
+        self.send(Message.PUBLISH, update)
 
-    def send (self, msg) :
-        self.transport(msg, addr=self.addr)
+    def send (self, type, payload=None, **opts) :
+        """
+            Build a Message and send it to the client.
+        """
+
+        self.transport(Message(type, payload=payload, **opts), addr=self.addr)
 
     def __str__ (self) :
         return pubsub.udp.addrname(self.addr)
@@ -114,22 +112,6 @@ class Server :
         # { addr: ServerClient }
         self.clients = { }
         
-        # { ServerClient } of clients subscribed to all sensors
-        self.sensors_clients = set()
-
-    def lookup_sensors (self, sensors) :
-        """
-            Yield ServerSensors from list of sensor names.
-        """
-
-        for sensor_id in sensors :
-            sensor = self.sensors.get(sensor_id)
-
-            if sensor :
-                yield sensor
-            else :
-                log.warning("unknown sensor: %s", sensor_id)
-
     def sensor (self, msg, addr) :
         """
             Process a publish message from a sensor.
@@ -153,7 +135,7 @@ class Server :
             
             log.info("%s: new sensor", sensor)
         
-        sensor.publish(msg)
+        sensor.update(msg)
         
     def subscribe (self, msg, addr) :
         """

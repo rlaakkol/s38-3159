@@ -59,7 +59,7 @@ class ServerClient :
         self.transport = transport
         self.addr = addr
 
-        self.sensors = False
+        self.sensors = set()
 
         self.sendseq = collections.defaultdict(int)
         self.recvseq = collections.defaultdict(int)
@@ -119,7 +119,7 @@ class ServerClient :
 
         elif not sensors :
             # unsubscribe from all sensors
-            self.sensors = False
+            self.sensors = set()
         
         else :
             # subscribe to given sensors

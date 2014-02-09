@@ -27,8 +27,8 @@ def parse_str (c0, iter) :
         >>> list(parse_str("'", iter("foo'")))
         ['f', 'o', 'o']
     """
-    ESC = {'\\': '\\', "'": "'", '"': '"', 'a': '\a', 'b': '\b', 'f': '\f', 
-        'n': '\n', 'r': '\r', 't': '\t', 'v': '\v'}
+    ESC = {'\\': '\\', '/': '/', "'": "'", '"': '"', 'a': '\a', 'b': '\b', 
+        'f': '\f', 'n': '\n', 'r': '\r', 't': '\t', 'v': '\v'}
 
     while True :
         c = next(iter, None)
@@ -46,6 +46,15 @@ def parse_str (c0, iter) :
                 c2 = next(iter, None)
                 if c1 and c2 :
                     yield chr(int(c1 + c2, 16))
+                else :
+                    raise ParseError("truncated-string-escape")
+
+            elif c == 'u' :
+                c = []
+                for i in range(4):
+                    c.append(next(iter, None))
+                if c[0] and c[1] and c[2] and c[3]:
+                    yield chr(int(''.join(c), 16))
                 else :
                     raise ParseError("truncated-string-escape")
 
@@ -152,7 +161,7 @@ def parse_item (c, iter) :
         val = None
         c1 = None
 
-    elif c == "'" :
+    elif c in ("'", '"') :
         val = ''.join(parse_str(c, iter))
         c1 = parse_next(iter)
 
@@ -178,6 +187,8 @@ def parse (str) :
     r"""
         Parse str -> value
 
+        >>> parse('"bar"')
+        'bar'
         >>> parse("'foo'")
         'foo'
         >>> parse("1234")
@@ -223,10 +234,10 @@ def build_string (str) :
     string = '"'
 
     for c in str:
-        if c.isprintable() and ord(c) <= 127 :
-            string += c
-        elif c in QUOTE :
+        if c in QUOTE :
             string += '\\' + QUOTE[c]
+        elif c.isprintable() and ord(c) <= 127 :
+            string += c
         else :
             string += '\\u{0:04x}'.format(ord(c))
     string += '"'

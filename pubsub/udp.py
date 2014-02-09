@@ -113,26 +113,26 @@ class Socket (object) :
                 sockname    = ("[{sockname}]".format(sockname=sock_name) if sock_name else ''),
         )
 
+def addrname (addr) :
+    """
+        Return a human-readable representation of the given socket address.
+    """
+
+    host, port = socket.getnameinfo(addr, socket.NI_DGRAM | socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
+    
+    return "{host}:{port}".format(host=host, port=port)
+
 def sockname (sock) :
     """
         Return a human-readable representation of the socket local address.
     """
 
-    addr = sock.getsockname()
-    
-    host, port = socket.getnameinfo(addr, socket.NI_DGRAM | socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
-    
-    return "{host}:{port}".format(host=host, port=port)
+    return addrname(sock.getsockname())
  
 def peername (sock) :
     """
         Return a human-readable representation of the socket remote address.
     """
 
-    addr = sock.getpeername()
-    
-    host, port = socket.getnameinfo(addr, socket.NI_DGRAM | socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
-
-    return "{host}:{port}".format(host=host, port=port)
-    
+    return addrname(sock.getpeername())
 

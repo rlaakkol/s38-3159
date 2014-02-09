@@ -209,9 +209,27 @@ def parse_bytes (bytes) :
     return parse(bytes.decode('ascii'))
 
 def build_string (str) :
-    yield "'"
-    yield str
-    yield "'"
+    r"""
+    >>> "".join(build_string('\v'))
+    '"\\u000b"'
+    >>> "".join(build_string('\t'))
+    '"\\t"'
+    >>> "".join(build_string('foobar'))
+    '"foobar"'
+    """
+    QUOTE = {'\\': '\\', '/': '/', "'": "'", '"': '"', '\b': 'b', '\f': 'f', 
+        '\n': 'n', '\r': 'r', '\t': 't', '\v': 'u000b', '\a': 'u0007'}
+    string = '"'
+
+    for c in str:
+        if c.isprintable() and ord(c) <= 127 :
+            string += c
+        elif c in QUOTE :
+            string += '\\' + QUOTE[c]
+        else :
+            string += '\\u{0:04x}'.format(ord(c))
+    string += '"'
+    yield string
 
 def build_number (num) :
     yield str(num)
@@ -260,7 +278,7 @@ def build_item (item) :
         >>> list(build_item(1234))
         ['1234']
         >>> list(build_item('foo'))
-        ["'", 'foo', "'"]
+        ['"foo"']
         >>> list(build_item([1, 2]))
         ['[', '1', ',', '2', ']']
         >>> list(build_item({1: 2}))

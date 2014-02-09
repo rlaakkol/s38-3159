@@ -1,5 +1,7 @@
 import errno
 import socket
+import select
+import time
 
 import logging; log = logging.getLogger('pubsub.udp')
 
@@ -139,4 +141,70 @@ def peername (sock) :
     """
 
     return addrname(sock.getpeername())
+
+class Polling :
+    """
+        Select-based loop with timeouts and events.
+    """
+
+    def __init__ (self) :
+        self._poll = select.poll()
+        self._poll_sockets = { }
+    
+    def poll_read (self, socket) :
+        """
+            Register given socket for read() polling.
+        """
+
+        self._poll.register(socket, select.POLLIN)
+        self._poll_sockets[socket.fileno()] = socket
+
+    def poll (self, timeouts=None) :
+        """
+            Run one polling cycle.
+
+                timeouts        - sequence of (timer, time) values for timeouts
+        """
+
+        poll_timer = None
+        poll_timeout = None
+        
+        if timeouts :
+            # select shortest timeout
+            for timer, timeout in timeouts :
+                if not poll_timeout or timeout < poll_timeout :
+                    poll_timer = timer
+                    poll_timeout = timeout
+
+        if poll_timeout :
+            timeout = (poll_timeout - time.time()) * 1000
+
+            if timeout < 0 :
+                log.warning("immediate timeout: %s@%f = %f", poll_timer, poll_timeout, timeout)
+            else :
+                log.debug("%f...", timeout)
+
+            poll = self._poll.poll(timeout)
+        else :
+            log.debug("...")
+
+            poll = self._poll.poll()
+
+
+        if poll :
+            for fd, event in poll :
+                socket = self._poll_sockets[fd]
+                
+                # XXX: POLLIN vs POLLER?
+                log.debug("%s: read..", socket)
+
+                for recv in socket :
+                    # read
+                    yield socket, recv
+
+        else :
+            log.debug("%s: timeout", poll_timer)
+
+            # timeout
+            yield poll_timer, None
 

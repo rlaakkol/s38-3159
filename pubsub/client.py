@@ -78,7 +78,7 @@ class Client (pubsub.udp.Polling) :
 
         elif not sensors :
             # subscribe-query
-            self.send(Message.SUBSCRIBE, seq=False)
+            subscription = None
 
         else :
             raise ValueError(sensors)
@@ -132,6 +132,10 @@ class Client (pubsub.udp.Polling) :
                 sendtime = self.sendtime.pop(msg.type)
 
                 log.debug("%s:%d: ack @ %fs", msg.type_str, msg.ackseq, (time.time() - sendtime))
+
+        elif not self.sendseq[msg.type] :
+            # clear sendtime for seqless queries
+            sendtime = self.sendtime.pop(msg.type)
         
         if msg.seq or not msg.ackseq :
             # XXX: check seq

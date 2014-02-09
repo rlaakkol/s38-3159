@@ -9,9 +9,8 @@ import pubsub.udp
 
 from pubsub.protocol import Message
 
-import collections
+import collections # XXX: protocol
 import logging; log = logging.getLogger('pubsub.server')
-import select
 
 class ServerSensor :
     """
@@ -160,12 +159,14 @@ class ServerClient :
     def __str__ (self) :
         return pubsub.udp.addrname(self.addr)
 
-class Server :
+class Server (pubsub.udp.Polling) :
     """
         Server state/logic implementation.
     """
 
     def __init__ (self, publish_port, subscribe_port) :
+        super(Server, self).__init__()
+
         self.sensor_port = pubsub.sensors.Transport.listen(publish_port, nonblocking=True)
         log.info("Listening for sensor publish messages on %s", self.sensor_port)
 
@@ -178,7 +179,7 @@ class Server :
         # { addr: ServerClient }
         self.clients = { }
         
-    def sensor (self, msg, addr) :
+    def sensor (self, msg) :
         """
             Process a publish message from a sensor.
         """
@@ -253,25 +254,19 @@ class Server :
             Mainloop
         """
 
-        poll = select.poll()
-        polling = { }
-
-        for socket in [self.sensor_port, self.client_port] :
-            poll.register(socket, select.POLLIN)
-            polling[socket.fileno()] = socket
+        self.poll_read(self.sensor_port)
+        self.poll_read(self.client_port)
 
         while True :
-            for fd, event in poll.poll() :
-                sock = polling[fd]
-
+            for socket, msg in self.poll() :
                 # process
-                if sock == self.sensor_port:
-                    for msg, addr in sock :
-                        self.sensor(msg, addr)
+                if socket == self.sensor_port:
+                    # Sensors -> dict
+                    self.sensor(msg)
 
-                elif sock == self.client_port :
-                    for msg, addr in sock :
-                        self.client(msg, addr)
+                elif socket == self.client_port :
+                    # Transport -> Message
+                    self.client(msg, msg.addr)
 
                 else :
-                    log.error("%s: unhandled message: %s", addr, msg)
+                    log.error("%s: message on unknown socket: %s", socket, msg)

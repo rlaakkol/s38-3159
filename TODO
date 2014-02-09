@@ -6,9 +6,6 @@
 
 # Implementation
 ## pubsub.jsonish
-* `null` <-> `None`
-* `true` <-> `True`
-* `false` <-> `False`
 
 ## pubsub.server
 * log sensor data

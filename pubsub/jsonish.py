@@ -152,6 +152,35 @@ def parse_dict (c, iter) :
         else :
             raise ParseError("invalid keyval-sep: {c}".format(c=c))
 
+def parse_const (c, iter) :
+    """
+        Parse true/false/null -> True/False/None
+    """
+
+    token = c
+
+    while True :
+        c = parse_next(iter)
+        
+        if not c :
+            break
+        elif c.isalpha() :
+            token += c
+        else :
+            break
+
+    if token == 'true' :
+        return c, True
+
+    elif token == 'false' :
+        return c, False
+
+    elif token == 'null' :
+        return c, None
+
+    else :
+        raise ParseError("unknown token: {t}".format(t=token))
+
 def parse_item (c, iter) :
     """
         Parse iterable -> value        
@@ -177,7 +206,7 @@ def parse_item (c, iter) :
         c1 = parse_next(iter)
 
     else :
-        raise ParseError("invalid start-token: {c}".format(c=c))
+        c1, val = parse_const(c, iter)
         
     log.debug("%s -> %r -> %s", c, val, c1)
 
@@ -187,6 +216,7 @@ def parse (str) :
     r"""
         Parse str -> value
 
+        >>> parse("")
         >>> parse('"bar"')
         'bar'
         >>> parse("'foo'")
@@ -203,6 +233,10 @@ def parse (str) :
         {'foo': 'bar'}
         >>> parse(r"'\x0e'")
         '\x0e'
+        >>> parse("true")
+        True
+        >>> parse("false")
+        False
     """
 
     i = iter(str)
@@ -242,6 +276,12 @@ def build_string (str) :
             string += '\\u{0:04x}'.format(ord(c))
     string += '"'
     yield string
+
+def build_bool (bool) :
+    if bool :
+        yield 'true'
+    else :
+        yield 'false'
 
 def build_number (num) :
     yield str(num)
@@ -300,6 +340,9 @@ def build_item (item) :
     if isinstance(item, str) :
         return build_string(item)
 
+    if isinstance(item, bool) :
+        return build_bool(item)
+
     elif isinstance(item, (int, float)) :
         return build_number(item)
 
@@ -309,10 +352,25 @@ def build_item (item) :
     elif isinstance(item, dict) :
         return build_dict(item)
 
+    elif item is None :
+        return 'null'
+
     else :
         raise ValueError("invalid item: {item!r}".format(item=item))
 
 def build_str (item) :
+    """
+        >>> print(build_str('foo'))
+        "foo"
+        >>> print(build_str([42, 5]))
+        [42,5]
+        >>> print(build_str(True))
+        true
+        >>> print(build_str(False))
+        false
+        >>> print(build_str(None))
+        null
+    """
     return ''.join(build_item(item))
 
 def build_bytes (item) :

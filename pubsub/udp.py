@@ -72,7 +72,7 @@ class Socket (object) :
         while True :
             try :
                 # recv -> bytes, (sockaddr)
-                buf, addr = self.sock.recvfrom(self.SIZE)
+                buf, addr = self.sock.recvfrom(self.SIZE, socket.MSG_TRUNC)
 
             except socket.error as error :
                 if error.errno in (errno.EAGAIN, errno.EWOULDBLOCK) :
@@ -82,6 +82,10 @@ class Socket (object) :
                     log.exception("recvfrom: %s", error)
                     raise
             
+            if len(buf) > self.SIZE :
+                log.warning("%s: truncated message from %s at %d/%d bytes", self, addrname(addr), self.SIZE, len(buf))
+                continue
+                
             yield buf, addr
 
     def __str__ (self) :

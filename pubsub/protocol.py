@@ -19,10 +19,10 @@ class Message (object) :
         TEARDOWN:   'T',
     }
 
-    def __init__ (self, type, flags=0, ack_seq=0, seq=0, payload=None) :
+    def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None) :
         self.type = type
         self.flags = flags
-        self.ack_seq = ack_seq
+        self.ackseq = ackseq
         self.seq = seq
         self.payload = payload
 
@@ -31,7 +31,7 @@ class Message (object) :
         return self.TYPE_NAMES.get(self.type, '?')
 
     def __str__ (self) :
-        return "{self.type_str}[{self.ack_seq}:{self.seq}] {self.payload!r}".format(self=self)
+        return "{self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
     
 class Transport (pubsub.udp.Socket) :
     """
@@ -46,7 +46,7 @@ class Transport (pubsub.udp.Socket) :
 
     def parse (self, buf) :
         # header
-        magic, type, flags, ack_seq, seq = self.HEADER.unpack(buf[:self.HEADER.size])
+        magic, type, flags, ackseq, seq = self.HEADER.unpack(buf[:self.HEADER.size])
 
         if magic != self.MAGIC :
             raise Error("Invalid magic: {magic:x}".format(magic=magic))
@@ -54,11 +54,11 @@ class Transport (pubsub.udp.Socket) :
         # payload
         payload = pubsub.jsonish.parse_bytes(buf[self.HEADER.size:])
  
-        return Message(type, flags, ack_seq, seq, payload)
+        return Message(type, flags, ackseq, seq, payload)
 
     def build (self, msg) :
         # header
-        header = self.HEADER.pack(self.MAGIC, msg.type, msg.flags, msg.ack_seq, msg.seq)
+        header = self.HEADER.pack(self.MAGIC, msg.type, msg.flags, msg.ackseq, msg.seq)
 
         # payload
         if msg.payload is None :
@@ -99,3 +99,4 @@ class Transport (pubsub.udp.Socket) :
         log.debug("%s: %s", addr, msg)
 
         super(Transport, self).__call__(buf, addr=addr)
+

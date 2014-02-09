@@ -39,7 +39,11 @@ class ServerSensor :
         log.info("%s: %s", self, update)
 
         for client in self.server.sensor_clients(self) :
-            client.sensor_update(self, update)
+            try :
+                client.sensor_update(self, update)
+            except Exception as ex :
+                # XXX: drop update...
+                log.exception("ServerClient %s: sensor_update %s:%s", client, self, update)
         
     def __str__ (self) :
         return self.dev_id
@@ -171,8 +175,8 @@ class Server :
         try :
             client.recv(msg)
         except Exception as ex :
-            # drop message...
-            log.exception("ServerClient.recv failed: %s", ex)
+            # XXX: drop message...
+            log.exception("ServerClient %s: %s", client, msg)
 
     def __call__ (self) :
         """

@@ -24,7 +24,7 @@ class Client :
             Build a Message and send it to the server.
         """
 
-        if seq is None and payload :
+        if seq is None and payload is not None :
             # stateful query auto-sendseq
             seq = self.sendseq[Message.SUBSCRIBE] + 1
             self.sendseq[Message.SUBSCRIBE] = seq
@@ -75,9 +75,11 @@ class Client :
             Process a publish from the server.
         """
 
+        update = { update['dev_id']: update['sensor_data'] }
+
         log.info("%s", update)
-        
-        return { update['dev_id']: update['sensor_data'] }
+
+        return update
     
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
@@ -97,7 +99,9 @@ class Client :
         if msg.type in self.RECV :
             ret = self.RECV[msg.type](self, msg.seq, msg.payload)
             
-            log.info("%s:%d:%s = %s", msg.type_str, msg.seq, msg.payload, ret)
+            log.debug("%s:%d:%s = %s", msg.type_str, msg.seq, msg.payload, ret)
+
+            return ret
 
         else :
             log.warning("Received unknown message type from server: %s", msg)

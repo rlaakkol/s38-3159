@@ -9,6 +9,7 @@ import pubsub.udp
 
 from pubsub.protocol import Message
 
+import collections
 import logging; log = logging.getLogger('pubsub.server')
 import select
 
@@ -60,24 +61,58 @@ class ServerClient :
 
         self.sensors = False
 
+        self.sendseq = collections.defaultdict(int)
+        self.recvseq = collections.defaultdict(int)
+
     def recv (self, msg) :
         """
             Process a message from the client.
         """
 
-        if msg.type == Message.SUBSCRIBE :
-            return self.recv_subscribe(msg.payload)
+        recvseq = self.recvseq[msg.type]
+        
+        if msg.seq < recvseq :
+            log.warning("%s: drop duplicate %s:%d < %d", self, msg.type_str, msg.seq, recvseq)
+
+        elif msg.seq == recvseq :
+            log.warning("%s: dupack %s:%d", self, msg.type_str, msg.seq)
+
+            self.send(msg.type, ackseq=msg.seq)
 
         else :
-            log.warning("%s: Unhandled message type: %s", self, msg)
+            handler = self.RECV[msg.type]
+            
+            try :
+                # process request
+                payload = handler(self, msg.seq, msg.payload)
 
-    def recv_subscribe (self, sensors) :
+            except Exception as ex :
+                log.exception("%s: %s", self, msg)
+
+            else :
+                # processed state update
+                self.recvseq[msg.type] = msg.seq
+                
+                if payload :
+                    # ack + response
+                    seq = self.sendseq[msg.type] + 1
+        
+                    log.info("%s: %s:%d:%s -> %d:%s", self, msg.type_str, msg.seq, msg.payload, seq, payload)
+
+                    self.send(msg.type, payload, seq=seq, ackseq=msg.seq)
+
+                    self.sendseq[msg.type] = seq
+                else :
+                    # ack
+                    log.info("%s: %s:%d:%s -> *", self, msg.type_str, msg.seq, msg.payload)
+
+                    self.send(msg.type, ackseq=msg.seq)
+
+    def recv_subscribe (self, seq, sensors) :
         """
-            Process a subscription message from the client.
+            Process a subscription request from the client, or query if not seq.
         """
-
-        log.info("%s: %s", self, sensors)
-
+        
         if sensors is True :
             # subscribe to all sensors
             self.sensors = True
@@ -89,6 +124,10 @@ class ServerClient :
         else :
             # subscribe to given sensors
             self.sensors = set(sensors)
+
+    RECV = {
+            Message.SUBSCRIBE:  recv_subscribe,
+    }
 
     def sensor_update (self, sensor, update) :
         """
@@ -112,7 +151,11 @@ class ServerClient :
             Build a Message and send it to the client.
         """
 
-        self.transport(Message(type, payload=payload, **opts), addr=self.addr)
+        msg = Message(type, payload=payload, **opts)
+
+        log.debug("%s: %s", self, msg)
+
+        self.transport(msg, addr=self.addr)
 
     def __str__ (self) :
         return pubsub.udp.addrname(self.addr)
@@ -165,18 +208,45 @@ class Server :
         """
             Process a message from a client.
         """
+            
+        log.debug("%s: %s", pubsub.udp.addrname(addr), msg)
 
-        # maintain client state
-        if addr in self.clients :
-            client = self.clients[addr]
+        if msg.seq or msg.ackseq :
+            # maintain client state
+            if addr in self.clients :
+                client = self.clients[addr]
+            else :
+                # create new stateful client
+                client = self.clients[addr] = ServerClient(self, self.client_port, addr)
+
+            try :
+                client.recv(msg)
+            except Exception as ex :
+                # XXX: drop message...
+                log.exception("ServerClient %s: %s", client, msg)
+
+        elif msg.type == Message.SUBSCRIBE :
+            # stateless query
+            return self.client_subscribe_query(addr, msg.payload)
+
         else :
-            client = self.clients[addr] = ServerClient(self, self.client_port, addr)
-        
-        try :
-            client.recv(msg)
-        except Exception as ex :
-            # XXX: drop message...
-            log.exception("ServerClient %s: %s", client, msg)
+            log.warning("Message from unknown client %s: %s", addr, msg)
+            return
+
+    def client_subscribe_query (self, addr, sensors=None) :
+        """
+            Process a subscribe-query message from an unknown client
+        """
+
+        if sensors is not None :
+            log.warning("%s: subscribe-query with payload: %s", pubsub.udp.addrname(addr), sensors)
+
+
+        sensors = [str(sensor) for sensor in self.sensors.values()]
+
+        log.info("%s: %s", pubsub.udp.addrname(addr), sensors)
+
+        self.client_port(Message(Message.SUBSCRIBE, payload=sensors), addr=addr)
 
     def __call__ (self) :
         """

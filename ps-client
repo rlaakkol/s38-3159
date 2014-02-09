@@ -38,8 +38,14 @@ def main (args) :
             print(sensor)
 
     if not args.list or args.sensors :
+
+        if args.sensors :
+            sub = client.subscribe(args.sensors)
+        else :
+            sub = client.subscribe()
+
         # subscribe -> publish
-        for update in client.subscribe(args.sensors) :
+        for update in sub :
             print(update)
 
 if __name__ == '__main__':

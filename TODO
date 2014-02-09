@@ -9,8 +9,6 @@
 * `null` <-> `None`
 * `true` <-> `True`
 * `false` <-> `False`
-* string `"` quotes
-* string `\` escapes
 
 ## pubsub.server
 * log sensor data

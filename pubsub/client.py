@@ -15,11 +15,6 @@ import logging; log = logging.getLogger('pubsub.client')
 
 class Client (pubsub.udp.Polling) :
 
-    
-    TIMEOUT = {
-            Message.SUBSCRIBE:  10.0,
-    }
-
     def __init__ (self, server_ip, server_port) :
         """
             server_ip       - str host
@@ -28,11 +23,17 @@ class Client (pubsub.udp.Polling) :
 
         super(Client, self).__init__()
 
-        self.server = pubsub.protocol.Transport.connect(server_ip, server_port)
+        self.server = pubsub.protocol.Transport.connect(server_ip, server_port,
+                # required for timeouts
+                nonblocking = True
+        )
         log.info("Connected to server on %s", self.server)
 
         self.sendseq = collections.defaultdict(int)
         self.sendtime = collections.defaultdict(lambda: None)
+
+        # subscription state
+        self.subscription = None
 
     def send (self, type, payload=None, seq=None, **opts) :
         """
@@ -56,6 +57,10 @@ class Client (pubsub.udp.Polling) :
 
         self.sendtime[type] = time.time()
 
+    SEND_TIMEOUT = {
+            Message.SUBSCRIBE:  10.0,
+    }
+
     def send_subscribe (self, sensors=None) :
         """
             Send a subscribe query/request to the server.
@@ -65,11 +70,11 @@ class Client (pubsub.udp.Polling) :
 
         if sensors is True :
             # subscribe-request: all
-            self.send(Message.SUBSCRIBE, True)
+            subscription = True
 
         elif sensors :
             # subscribe-request: [sensor]
-            self.send(Message.SUBSCRIBE, list(sensors))
+            subscription = list(sensors)
 
         elif not sensors :
             # subscribe-query
@@ -77,6 +82,10 @@ class Client (pubsub.udp.Polling) :
 
         else :
             raise ValueError(sensors)
+            
+        self.send(Message.SUBSCRIBE, subscription)
+
+        self.subscription = subscription
 
     def recv_subscribe (self, seq, sensors) :
         """
@@ -109,26 +118,60 @@ class Client (pubsub.udp.Polling) :
         """
 
         log.debug("%s", msg)
+        
+        if msg.ackseq :
+            sendseq = self.sendseq[msg.type]
 
-        # TODO: acks
+            if msg.ackseq < sendseq :
+                log.warning("%s:%d: late ack < %d", msg.type_str, msg.ackseq, sendseq)
 
+            elif msg.ackseq > sendseq :
+                log.warning("%s:%d: future ack > %d", msg.type_str, msg.ackseq, sendseq)
 
-        if msg.type in self.RECV :
-            ret = self.RECV[msg.type](self, msg.seq, msg.payload)
-            
-            log.debug("%s:%d:%s = %s", msg.type_str, msg.seq, msg.payload, ret)
+            else :
+                sendtime = self.sendtime.pop(msg.type)
 
-            return ret
+                log.debug("%s:%d: ack @ %fs", msg.type_str, msg.ackseq, (time.time() - sendtime))
+        
+        if msg.seq or not msg.ackseq :
+            # XXX: check seq
+            if msg.type in self.RECV :
+                ret = self.RECV[msg.type](self, msg.seq, msg.payload)
+                
+                log.debug("%s:%d:%s = %s", msg.type_str, msg.seq, msg.payload, ret)
 
-        else :
-            log.warning("Received unknown message type from server: %s", msg)
+                return ret
+
+            else :
+                log.warning("Received unknown message type from server: %s", msg)
+
+    def timeout_subscribe (self, seq) :
+        """
+            Retransmit subscribe.
+        """
+
+        log.warning("%d:%s", seq, self.subscription)
+        
+        self.send(Message.SUBSCRIBE, self.subscription, seq=seq)
+
+    TIMEOUT = {
+            Message.SUBSCRIBE:  timeout_subscribe,
+    }
 
     def timeout (self, type) :
         """
             Handle timeout on given sendtime.
         """
 
-        log.warning("%s", type)
+        seq = self.sendseq[type]
+
+        if type in self.TIMEOUT :
+            log.debug("%s:%d", Message.type_name(type), seq)
+
+            self.TIMEOUT[type](self, seq)
+
+        else :
+            log.warning("%s:%d", Message.type_name(type), seq)
 
     def poll_timeouts (self) :
         """
@@ -137,10 +180,8 @@ class Client (pubsub.udp.Polling) :
 
         for type, sendtime in self.sendtime.items() :
             if sendtime :
-                timeout = sendtime + self.TIMEOUT[type]
+                timeout = sendtime + self.SEND_TIMEOUT[type]
 
-                log.debug("type=%s: %d", type, timeout)
-                
                 yield type, timeout
 
     def __iter__ (self) :

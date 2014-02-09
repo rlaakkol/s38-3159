@@ -19,12 +19,15 @@ class Message (object) :
         TEARDOWN:   'T',
     }
 
-    def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None) :
+    def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None, addr=None) :
         self.type = type
         self.flags = flags
         self.ackseq = ackseq
         self.seq = seq
         self.payload = payload
+
+        # meta
+        self.addr = addr
 
     @property
     def type_str (self) :
@@ -44,7 +47,7 @@ class Transport (pubsub.udp.Socket) :
     # support maximum-size UDP messages
     SIZE = 2**16
 
-    def parse (self, buf) :
+    def parse (self, buf, **opts) :
         # header
         magic, type, flags, ackseq, seq = self.HEADER.unpack(buf[:self.HEADER.size])
 
@@ -54,7 +57,7 @@ class Transport (pubsub.udp.Socket) :
         # payload
         payload = pubsub.jsonish.parse_bytes(buf[self.HEADER.size:])
  
-        return Message(type, flags, ackseq, seq, payload)
+        return Message(type, flags, ackseq, seq, payload, **opts)
 
     def build (self, msg) :
         # header
@@ -75,7 +78,7 @@ class Transport (pubsub.udp.Socket) :
 
         for buf, addr in super(Transport, self).__iter__() :
             try :
-                msg = self.parse(buf)
+                msg = self.parse(buf, addr=addr)
 
             except Error as error :
                 log.error("%s: invalid message: %s", addr, error)
@@ -87,7 +90,7 @@ class Transport (pubsub.udp.Socket) :
 
             log.debug("%s", msg)
 
-            yield msg, addr
+            yield msg
 
     def __call__ (self, msg, addr=None) :
         """

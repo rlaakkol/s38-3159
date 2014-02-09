@@ -3,3 +3,12 @@
 * Header magic
 * Header endianness
 * Header flags field
+
+# Implementation
+## pubsub.jsonish
+* `null` <-> `None`
+* `true` <-> `True`
+* `false` <-> `False`
+* string `"` quotes
+* string `\` escapes
+

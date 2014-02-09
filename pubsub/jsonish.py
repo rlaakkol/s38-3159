@@ -2,14 +2,6 @@
     The abomination that is not JSON.
 
     Serious wheel-reinventing in progress.
-
-    TODO:
-        null/None
-        true/True
-        false/False
-        string " quotes
-        string \ escapes
-
 """
 
 import logging; log = logging.getLogger('pubsub.jsonish')

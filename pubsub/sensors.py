@@ -7,7 +7,7 @@ import pubsub.udp
 
 import logging; log = logging.getLogger('pubsub.sensors')
 
-class Sensors (pubsub.udp.Socket) :
+class Transport (pubsub.udp.Socket) :
     """
         Receiving sensor data updates from sensors.
     """
@@ -17,7 +17,7 @@ class Sensors (pubsub.udp.Socket) :
             Yield parsed messages received from sensors.
         """
 
-        for buf, addr in super(Sensors, self).__iter__() :
+        for buf, addr in super(Transport, self).__iter__() :
             # parse
             try :
                 msg = pubsub.jsonish.parse_bytes(buf)

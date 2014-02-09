@@ -6,18 +6,33 @@
 
 import pubsub.jsonish
 import pubsub.protocol
+import pubsub.udp
 
 from pubsub.protocol import Message
 
-import collections
+import collections, time # XXX: protocol
 import logging; log = logging.getLogger('pubsub.client')
 
-class Client :
+class Client (pubsub.udp.Polling) :
+
+    
+    TIMEOUT = {
+            Message.SUBSCRIBE:  10.0,
+    }
+
     def __init__ (self, server_ip, server_port) :
+        """
+            server_ip       - str host
+            server_port     - str service
+        """
+
+        super(Client, self).__init__()
+
         self.server = pubsub.protocol.Transport.connect(server_ip, server_port)
         log.info("Connected to server on %s", self.server)
 
         self.sendseq = collections.defaultdict(int)
+        self.sendtime = collections.defaultdict(lambda: None)
 
     def send (self, type, payload=None, seq=None, **opts) :
         """
@@ -26,8 +41,8 @@ class Client :
 
         if seq is None and payload is not None :
             # stateful query auto-sendseq
-            seq = self.sendseq[Message.SUBSCRIBE] + 1
-            self.sendseq[Message.SUBSCRIBE] = seq
+            seq = self.sendseq[type] + 1
+            self.sendseq[type] = seq
 
         elif not seq :
             # stateless query
@@ -38,6 +53,8 @@ class Client :
         log.debug("%s", msg)
 
         self.server(msg)
+
+        self.sendtime[type] = time.time()
 
     def send_subscribe (self, sensors=None) :
         """
@@ -106,18 +123,53 @@ class Client :
         else :
             log.warning("Received unknown message type from server: %s", msg)
 
+    def timeout (self, type) :
+        """
+            Handle timeout on given sendtime.
+        """
+
+        log.warning("%s", type)
+
+    def poll_timeouts (self) :
+        """
+            Collect timeouts for polling.
+        """
+
+        for type, sendtime in self.sendtime.items() :
+            if sendtime :
+                timeout = sendtime + self.TIMEOUT[type]
+
+                log.debug("type=%s: %d", type, timeout)
+                
+                yield type, timeout
+
     def __iter__ (self) :
         """
             Mainloop, yielding recv'd messages.
         """
+        
+        self.poll_read(self.server)
 
-        for msg, addr in self.server :
-            # XXX: check addr matches server addr
-            
-            out = self.recv(msg)
+        while True :
+            for type, msg in self.poll(self.poll_timeouts()) :
+                if msg :
+                    if type != self.server :
+                        log.error("poll on invalid socket: %s", socket)
+                        continue
 
-            if out is not None :
-                yield msg.type, out
+                    # Transport -> Message
+                    # XXX: check addr matches server addr
+                    
+                    out = self.recv(msg)
+
+                    if out is not None :
+                        yield msg.type, out
+
+                else :
+                    # timeout
+                    self.sendtime[type] = None
+
+                    self.timeout(type)
 
     def query (self) :
         """

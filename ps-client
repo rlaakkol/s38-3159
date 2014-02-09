@@ -19,6 +19,9 @@ def main (args) :
             help="Publish server address")
     parser.add_argument('-p', '--server-port', metavar='PORT', required=True,
             help="Publish server port")
+    parser.add_argument('-L', '--list', action='store_true',
+            help="Query for available sensors")
+
     parser.add_argument('sensors', metavar='SENSOR', nargs='*',
             help="Sensors to subscribe to")
 
@@ -28,11 +31,16 @@ def main (args) :
 
     # client
     client = pubsub.client.Client(args.server_ip, args.server_port)
+    
+    if args.list :
+        # query
+        for sensor in client.query() :
+            print(sensor)
 
-    client.subscribe(args.sensors)
-
-    for msg in client :
-        print(msg)
+    if not args.list or args.sensors :
+        # subscribe -> publish
+        for update in client.subscribe(args.sensors) :
+            print(update)
 
 if __name__ == '__main__':
     pubsub.args.main(main)

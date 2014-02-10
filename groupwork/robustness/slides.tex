@@ -18,6 +18,7 @@
 \usepackage[utf8x]{inputenc}
 \usepackage{graphicx}
 \usepackage[ELEC]{aaltologo}
+%\usepackage{animate}
 
 \title[SSL X.509 commonName Attack]{SSL X.509 commonName $\backslash0$ Prefix Attack}
 \author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
@@ -85,9 +86,13 @@ commonName ::=
         \item \texttt{"www.paypal.com$\backslash0$.example.com"}
       \end{itemize} 
   \end{itemize}
+  \pause
   \begin{figure}
     \centering
-    \Huge{PWNED!}
+    %\begin{animateinline}[autoplay,loop]{1.5}
+      {\Huge{PWNED!}}
+     % \newframe
+    %\end{animateinline}
     \caption{You have been owned}
   \end{figure}
 \end{frame}

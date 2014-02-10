@@ -1,0 +1,91 @@
+\documentclass{beamer}
+%
+% Choose how your presentation looks.
+%
+% For more themes, color themes and font themes, see:
+% http://deic.uab.es/~iblanes/beamer_gallery/index_by_theme.html
+%
+\mode<presentation>
+{
+  \usetheme{Warsaw}      % or try Darmstadt, Madrid, Warsaw, ...
+  \usecolortheme{default} % or try albatross, beaver, crane, ...
+  \usefonttheme{default}  % or try serif, structurebold, ...
+  \setbeamertemplate{navigation symbols}{}
+  \setbeamertemplate{caption}[numbered]
+} 
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\usepackage[ELEC]{aaltologo}
+
+\title[SSL X.509 commonName attack]{SSL X.509 commonName NUL prefix attack}
+\author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
+\institute{Aalto ELEC}
+\date{11.2.2014}
+\logo{\AaltoLogoRandomSmall{0.3}}
+
+\begin{document}
+
+\begin{frame}
+  	\titlepage
+\end{frame}
+
+% Uncomment these lines for an automatically generated outline.
+%\begin{frame}{Outline}
+%  \tableofcontents
+%\end{frame}
+
+\begin{frame}{Introduction}
+	\begin{itemize}
+		%\item Attack on the commonName field in the X.509 certificate.
+    \item Common implementation error in C-based SSL implementations.
+    \item Presented by Moxie Marlinspike at \textbf{DEF CON 17} (2009)
+ 	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{SSL X.509}
+  \begin{itemize}
+    \item SSL provides both integerity and identity
+    \item CA signs a cert for a validated commonName: \emph{paypal.com}
+    \item Client verifies server certificate commonName against requested domain
+    \item X.509 is an ASN.1 based binary format
+  \end{itemize}
+  \begin{verbatim}
+commonName ::=
+  SEQUENCE{ { 2 5 4 3 }, StringType( SIZE(1..64) ) }
+  \end{verbatim}
+\end{frame}
+
+\begin{frame}{X.509 ASN.1}
+  \begin{itemize}
+    \item IA5String defines a length-prefixed ASCII string
+    \item Used for X.509 Certificate \texttt{commonName} field
+  \end{itemize}
+  \begin{figure}
+    \begin{tabular}{*{20}{|c}}
+      \hline
+      $\backslash$x16 & $\backslash$x0E & w & w & w & . & p & a & y & p & a & l & . & c & o & m \\
+      \hline 
+    \end{tabular}
+    \caption{ASN.1 IA5String}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{X.509 attack}
+  \begin{itemize}
+    \item Common SSL libraries treat the commonName as a NUL-terminated C-string
+    \item \texttt{strcmp()}
+    \item \texttt{paypal.com$\backslash$0.example.com}
+    \item -> FAIL!
+  \end{itemize}
+\end{frame}
+
+%\begin{frame}[fragile]{Examples}
+%\end{frame}
+
+\begin{frame}{Conclusion}
+\end{frame}
+
+
+\end{document}

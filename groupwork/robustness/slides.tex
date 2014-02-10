@@ -19,7 +19,7 @@
 \usepackage{graphicx}
 \usepackage[ELEC]{aaltologo}
 
-\title[SSL X.509 commonName attack]{SSL X.509 commonName NUL prefix attack}
+\title[SSL X.509 commonName Attack]{SSL X.509 commonName $\backslash0$ Prefix Attack}
 \author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
 \institute{Aalto ELEC}
 \date{11.2.2014}
@@ -39,14 +39,18 @@
 \begin{frame}{Introduction}
 	\begin{itemize}
 		%\item Attack on the commonName field in the X.509 certificate.
-    \item Common implementation error in C-based SSL implementations.
+    \item Common implementation error in C-based SSL implementations
     \item Presented by Moxie Marlinspike at \textbf{DEF CON 17} (2009)
  	\end{itemize}
+  \begin{figure}
+    \includegraphics[scale=.7]{moxie}
+    \caption{Moxie Marlinspike}
+  \end{figure}
 \end{frame}
 
 \begin{frame}[fragile]{SSL X.509}
   \begin{itemize}
-    \item SSL provides both integerity and identity
+    \item SSL provides both confidentiality, integrity and identity
     \item CA signs a cert for a validated commonName: \emph{paypal.com}
     \item Client verifies server certificate commonName against requested domain
     \item X.509 is an ASN.1 based binary format
@@ -65,27 +69,40 @@ commonName ::=
   \begin{figure}
     \begin{tabular}{*{20}{|c}}
       \hline
-      $\backslash$x16 & $\backslash$x0E & w & w & w & . & p & a & y & p & a & l & . & c & o & m \\
+      $\backslash$x0E & w & w & w & . & p & a & y & p & a & l & . & c & o & m \\
       \hline 
     \end{tabular}
     \caption{ASN.1 IA5String}
   \end{figure}
 \end{frame}
 
-\begin{frame}{X.509 attack}
+\begin{frame}{X.509 $\backslash0$ prefix attack}
   \begin{itemize}
-    \item Common SSL libraries treat the commonName as a NUL-terminated C-string
+    \item Common SSL libraries treat the commonName as a $\backslash0$-terminated C-string
     \item \texttt{strcmp()}
-    \item \texttt{paypal.com$\backslash$0.example.com}
-    \item -> FAIL!
+      \begin{itemize}
+        \item \texttt{"www.paypal.com"}  
+        \item \texttt{"www.paypal.com$\backslash0$.example.com"}
+      \end{itemize} 
+  \end{itemize}
+  \begin{figure}
+    \centering
+    \Huge{PWNED!}
+    \caption{You have been owned}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{Conclusion}
+  \begin{itemize}
+    \item Common vulnerability across multiple independent implementations
+    \begin{description}
+      \item[Web Browsers] Firefox, IE, Chrome, Lynx, Curl
+      \item[Mail Clients] Thunderbird, Outlook, Evolution
+      \item[Chat Clients] Pidgin, AIM, irssi, centericq
+      \item[SSL VPNs] AEP, Citrix, etc
+    \end{description}
+    \item Practical attack implemented in \textbf{sslstrip}
   \end{itemize}
 \end{frame}
-
-%\begin{frame}[fragile]{Examples}
-%\end{frame}
-
-\begin{frame}{Conclusion}
-\end{frame}
-
 
 \end{document}

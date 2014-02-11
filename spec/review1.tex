@@ -1,0 +1,62 @@
+\documentclass{beamer}
+%
+% Choose how your presentation looks.
+%
+% For more themes, color themes and font themes, see:
+% http://deic.uab.es/~iblanes/beamer_gallery/index_by_theme.html
+%
+\mode<presentation>
+{
+  \usetheme{Warsaw}      % or try Darmstadt, Madrid, Warsaw, ...
+  \usecolortheme{default} % or try albatross, beaver, crane, ...
+  \usefonttheme{default}  % or try serif, structurebold, ...
+  \setbeamertemplate{navigation symbols}{}
+  \setbeamertemplate{caption}[numbered]
+} 
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[ELEC]{aaltologo}
+\usepackage{verbatim}
+
+
+\title[SFO protocol]{Sensor Fusion and Optimization: Protocol Specification: Review 1}
+\author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
+\institute{Aalto ELEC}
+\date{12.2.2014}
+%\logo{\AaltoLogoRandomSmall{0.3}}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Implementation status}
+\begin{itemize}
+    \item Python3 Command-line Client, Server and \texttt{pubsub} package
+    \item UDP sockets; \texttt{jsonish} parsing, building
+    \item Protocol encoding (headers)
+    \item Server \texttt{recvseq} handling: drop duplicate requests + send acks
+    \item Client \texttt{sendseq} handling: handle acks, timeout and retransmit requests
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Protocol changes}
+\begin{itemize}
+    \item \texttt{\#define MAGIC 0x42}
+    \item Header fields network byte order (big-endian)
+  	\item TODO: Define byte-aligned flags field
+    \item Formatting of JSON data (quoting)
+    \item Support for 64KB UDP datagrams
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Current challenges}
+\begin{itemize}
+	\item Time
+	\item Is it possible to implement transport semantics generically?
+\end{itemize}
+\end{frame}
+
+\end{document}

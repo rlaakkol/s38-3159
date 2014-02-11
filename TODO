@@ -3,6 +3,7 @@
 * Header magic
 * Header endianness
 * Header flags field
+* Sequence wraparound
 
 # Implementation
 ## pubsub.jsonish

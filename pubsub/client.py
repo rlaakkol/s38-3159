@@ -132,8 +132,9 @@ class Client (pubsub.udp.Polling) :
                 sendtime = self.sendtime.pop(msg.type)
 
                 log.debug("%s:%d: ack @ %fs", msg.type_str, msg.ackseq, (time.time() - sendtime))
-
-        elif not self.sendseq[msg.type] :
+        
+        # XXX: handle as !ackseq && !seq?
+        elif msg.type in self.sendseq and not self.sendseq[msg.type] :
             # clear sendtime for seqless queries
             sendtime = self.sendtime.pop(msg.type)
         

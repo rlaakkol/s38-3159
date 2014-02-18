@@ -3,7 +3,6 @@
     Publish-Subscribe client.
 """
 
-
 import pubsub.jsonish
 import pubsub.protocol
 import pubsub.udp
@@ -114,7 +113,7 @@ class Client (pubsub.udp.Polling) :
 
     def recv (self, msg) :
         """
-            Handle recevied message.
+            Handle received message.
         """
 
         log.debug("%s", msg)
@@ -210,6 +209,7 @@ class Client (pubsub.udp.Polling) :
 
                     if out is not None :
                         yield msg.type, out
+                        #print('pub: %s' % out)
 
                 else :
                     # timeout

@@ -165,16 +165,27 @@ class Server (pubsub.udp.Polling) :
     """
 
     def __init__ (self, publish_port, subscribe_port) :
+        SENSOR_FILE = 'sensor.list'
         super(Server, self).__init__()
+
+        # { dev_id: ServerSensor }
+        self.sensors = { }
+
+        # Check for sensor.list
+        try :
+            with open(SENSOR_FILE) as senfile :
+                for sensor in senfile.readlines() :
+                    sensor_id = sensor.strip()
+                    self.sensors[sensor_id] = ServerSensor(self, sensor_id)
+        except IOError as err :
+            log.error('IO error: %s', err)
+            # TODO handle error properly
 
         self.sensor_port = pubsub.sensors.Transport.listen(publish_port, nonblocking=True)
         log.info("Listening for sensor publish messages on %s", self.sensor_port)
 
         self.client_port = pubsub.protocol.Transport.listen(subscribe_port, nonblocking=True)
         log.info("Listening for client subscribe messages on %s", self.client_port)
-
-        # { dev_id: ServerSensor }
-        self.sensors = { }
         
         # { addr: ServerClient }
         self.clients = { }
@@ -258,15 +269,19 @@ class Server (pubsub.udp.Polling) :
         self.poll_read(self.client_port)
 
         while True :
-            for socket, msg in self.poll() :
-                # process
-                if socket == self.sensor_port:
-                    # Sensors -> dict
-                    self.sensor(msg)
+            try:            
+                for socket, msg in self.poll() :
+                    # process
+                    if socket == self.sensor_port :
+                        # Sensors -> dict
+                        self.sensor(msg)
 
-                elif socket == self.client_port :
-                    # Transport -> Message
-                    self.client(msg, msg.addr)
+                    elif socket == self.client_port :
+                        # Transport -> Message
+                        self.client(msg, msg.addr)
 
-                else :
-                    log.error("%s: message on unknown socket: %s", socket, msg)
+                    else :
+                        log.error("%s: message on unknown socket: %s", socket, msg)
+            except KeyboardInterrupt :
+                print('SIGINT received')
+                return

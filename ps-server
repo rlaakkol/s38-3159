@@ -23,7 +23,7 @@ def main (args) :
     args = parser.parse_args(args)
     
     pubsub.args.apply(args)
-    
+   
     # server
     server = pubsub.server.Server(args.publish_port, args.subscribe_port)
 

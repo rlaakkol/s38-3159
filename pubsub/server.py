@@ -11,6 +11,8 @@ from pubsub.protocol import Message
 
 import collections # XXX: protocol
 import logging; log = logging.getLogger('pubsub.server')
+from pubsub.logger import Logger
+import time
 
 class ServerSensor :
     """
@@ -171,12 +173,16 @@ class Server (pubsub.udp.Polling) :
         # { dev_id: ServerSensor }
         self.sensors = { }
 
-        # Check for sensor.list
+        # { dev_id : Logger }
+        self.loggers = {}
+
+        # check for sensor.list and open logs
         try :
             with open(SENSOR_FILE) as senfile :
                 for sensor in senfile.readlines() :
                     sensor_id = sensor.strip()
                     self.sensors[sensor_id] = ServerSensor(self, sensor_id)
+                    self.loggers[sensor_id] = Logger('server_%s.log' % sensor_id)
         except IOError as err :
             log.error('IO error: %s', err)
             # TODO handle error properly
@@ -233,7 +239,7 @@ class Server (pubsub.udp.Polling) :
 
             try :
                 client.recv(msg)
-            except Exception as ex :
+            except Exception :
                 # XXX: drop message...
                 log.exception("ServerClient %s: %s", client, msg)
 
@@ -275,6 +281,7 @@ class Server (pubsub.udp.Polling) :
                     if socket == self.sensor_port :
                         # Sensors -> dict
                         self.sensor(msg)
+                        self.loggers[msg['dev_id']].log(str(time.time()) + '\t' + str(msg) + '\n')
 
                     elif socket == self.client_port :
                         # Transport -> Message
@@ -283,5 +290,8 @@ class Server (pubsub.udp.Polling) :
                     else :
                         log.error("%s: message on unknown socket: %s", socket, msg)
             except KeyboardInterrupt :
-                print('SIGINT received')
+                # close logs
+                for logger in self.loggers :
+                    self.loggers[logger].close()
+                print('SIGINT received, shutting down')
                 return

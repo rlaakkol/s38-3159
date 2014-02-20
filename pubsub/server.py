@@ -19,9 +19,10 @@ class ServerSensor :
         Server per-sensor state
     """
 
-    def __init__ (self, server, dev_id) :
+    def __init__ (self, server, dev_id, logger) :
         self.server = server
         self.dev_id = dev_id
+        self.logger = logger
 
     def recv (self, msg) :
         """
@@ -43,7 +44,8 @@ class ServerSensor :
         for client in self.server.sensor_clients(self) :
             try :
                 client.sensor_update(self, update)
-            except Exception as ex :
+                self.logger.log('%s\t%s\n' % (str(time.time()), str(update)))
+            except Exception :
                 # XXX: drop update...
                 log.exception("ServerClient %s: sensor_update %s:%s", client, self, update)
         
@@ -87,7 +89,7 @@ class ServerClient :
                 # process request
                 payload = handler(self, msg.seq, msg.payload)
 
-            except Exception as ex :
+            except Exception :
                 log.exception("%s: %s", self, msg)
 
             else :
@@ -167,8 +169,8 @@ class Server (pubsub.udp.Polling) :
     """
 
     def __init__ (self, publish_port, subscribe_port) :
-        SENSOR_FILE = 'sensor.list'
         super(Server, self).__init__()
+        SENSOR_FILE = "sensor.list"
 
         # { dev_id: ServerSensor }
         self.sensors = { }
@@ -177,11 +179,12 @@ class Server (pubsub.udp.Polling) :
         self.loggers = {}
 
         # check for sensor.list and open logs
+        self.sent_log = Logger('server_sent.log')
         try :
             with open(SENSOR_FILE) as senfile :
                 for sensor in senfile.readlines() :
                     sensor_id = sensor.strip()
-                    self.sensors[sensor_id] = ServerSensor(self, sensor_id)
+                    self.sensors[sensor_id] = ServerSensor(self, sensor_id, self.sent_log)
                     self.loggers[sensor_id] = Logger('server_%s.log' % sensor_id)
         except IOError as err :
             log.error('IO error: %s', err)
@@ -207,7 +210,7 @@ class Server (pubsub.udp.Polling) :
         if sensor_id in self.sensors :
             sensor = self.sensors[sensor_id]
         else :
-            sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id)
+            sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id, self.sent_log)
             
             log.info("%s: new sensor", sensor)
         
@@ -281,7 +284,10 @@ class Server (pubsub.udp.Polling) :
                     if socket == self.sensor_port :
                         # Sensors -> dict
                         self.sensor(msg)
-                        self.loggers[msg['dev_id']].log(str(time.time()) + '\t' + str(msg) + '\n')
+                        if msg["dev_id"] in self.loggers :
+                            self.loggers[msg["dev_id"]].log("%s\t%s\n" % (str(time.time()), str(msg)))
+                        else :
+                            log.error("sensor '%s' not found in sensor.list" % msg["dev_id"])
 
                     elif socket == self.client_port :
                         # Transport -> Message
@@ -293,5 +299,6 @@ class Server (pubsub.udp.Polling) :
                 # close logs
                 for logger in self.loggers :
                     self.loggers[logger].close()
-                print('SIGINT received, shutting down')
+                self.sent_log.close()
+                print("SIGINT received, shutting down")
                 return

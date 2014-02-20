@@ -8,11 +8,11 @@ import pubsub.sensors
 import pubsub.udp
 
 from pubsub.protocol import Message
+from pubsub.logger import Logger
+import time
 
 import collections # XXX: protocol
 import logging; log = logging.getLogger('pubsub.server')
-from pubsub.logger import Logger
-import time
 
 class ServerSensor :
     """

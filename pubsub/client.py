@@ -8,6 +8,7 @@ import pubsub.protocol
 import pubsub.udp
 
 from pubsub.protocol import Message
+from pubsub.logger import Logger
 
 import collections, time # XXX: protocol
 import logging; log = logging.getLogger('pubsub.client')
@@ -30,6 +31,9 @@ class Client (pubsub.udp.Polling) :
 
         self.sendseq = collections.defaultdict(int)
         self.sendtime = collections.defaultdict(lambda: None)
+
+        # TODO how to distuingish several clients, need an unique identifier
+        self.logger = Logger('client.log')
 
         # subscription state
         self.subscription = None
@@ -195,27 +199,31 @@ class Client (pubsub.udp.Polling) :
         
         self.poll_read(self.server)
 
-        while True :
-            for type, msg in self.poll(self.poll_timeouts()) :
-                if msg :
-                    if type != self.server :
-                        log.error("poll on invalid socket: %s", socket)
-                        continue
+        try :
+            while True :
+                for type, msg in self.poll(self.poll_timeouts()) :
+                    if msg :
+                        if type != self.server :
+                            log.error("poll on invalid socket: %s", socket)
+                            continue
 
-                    # Transport -> Message
-                    # XXX: check addr matches server addr
-                    
-                    out = self.recv(msg)
+                        # Transport -> Message
+                        # XXX: check addr matches server addr
+                        
+                        out = self.recv(msg)
 
-                    if out is not None :
-                        yield msg.type, out
-                        #print('pub: %s' % out)
+                        if out is not None :
+                            yield msg.type, out
+                            self.logger.log("%s\t%s\n" % (str(time.time()), str(out)))
 
-                else :
-                    # timeout
-                    self.sendtime[type] = None
-
-                    self.timeout(type)
+                    else :
+                        # timeout
+                        self.sendtime[type] = None
+                        self.timeout(type)
+        except KeyboardInterrupt :
+            self.logger.close()
+            print("Received SIGINT, exiting")
+            return
 
     def query (self) :
         """

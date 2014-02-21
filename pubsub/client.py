@@ -12,6 +12,7 @@ from pubsub.logger import Logger
 
 import collections, time # XXX: protocol
 import logging; log = logging.getLogger('pubsub.client')
+from os import getpid
 
 class Client (pubsub.udp.Polling) :
 
@@ -33,7 +34,7 @@ class Client (pubsub.udp.Polling) :
         self.sendtime = collections.defaultdict(lambda: None)
 
         # TODO how to distuingish several clients, need an unique identifier
-        self.logger = Logger('client.log')
+        self.logger = Logger('client_pid%d.log' % getpid())
 
         # subscription state
         self.subscription = None

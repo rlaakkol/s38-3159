@@ -33,7 +33,6 @@ class Client (pubsub.udp.Polling) :
         self.sendseq = collections.defaultdict(int)
         self.sendtime = collections.defaultdict(lambda: None)
 
-        # TODO how to distuingish several clients, need an unique identifier
         self.logger = Logger('client_pid%d.log' % getpid())
 
         # subscription state

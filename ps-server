@@ -5,6 +5,7 @@ import logging; log = logging.getLogger('ps-server')
 
 import pubsub.args
 import pubsub.server
+from pubsub.logger import Logger
 
 def main (args) :
     """
@@ -24,10 +25,37 @@ def main (args) :
     
     pubsub.args.apply(args)
    
+    # create loggers for sensors
+    SENSOR_FILE = 'sensor.list'
+    sensors = read_sensor_file(SENSOR_FILE)
+    loggers = {}
+
+    for sensor in sensors :
+        loggers[sensor] = Logger('server_%s.log' % sensor)
+    sent_logger = Logger('server_sent.log')
+
     # server
-    server = pubsub.server.Server(args.publish_port, args.subscribe_port)
+    server = pubsub.server.Server(args.publish_port, args.subscribe_port, 
+        sensors, loggers, sent_logger)
 
     return server()
 
+def read_sensor_file (filename) :
+    """
+        Reads the sensor file and returns the sensors in a list.
+    """
+    sensors = []
+    try :
+        with open(filename) as senfile :
+            for sensor in senfile.readlines() :
+                sensors.append(sensor.strip())
+    except IOError as err :
+        log.error('IO error: %s', err)
+        # TODO handle error properly
+    return sensors
+
 if __name__ == '__main__':
     pubsub.args.main(main)
+
+
+

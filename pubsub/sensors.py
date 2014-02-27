@@ -7,7 +7,7 @@ import pubsub.udp
 
 import logging; log = logging.getLogger('pubsub.sensors')
 
-class Transport (pubsub.udp.Socket) :
+class Transport (pubsub.udp.Socket):
     """
         Receiving sensor data updates from sensors.
     """
@@ -16,17 +16,17 @@ class Transport (pubsub.udp.Socket) :
     # plus other message overhead
     SIZE = 8000
 
-    def __iter__ (self) :
+    def __iter__ (self):
         """
             Yield parsed messages received from sensors.
         """
 
-        for buf, addr in super(Transport, self).__iter__() :
+        for buf, addr in super(Transport, self).__iter__():
             # parse
-            try :
+            try:
                 msg = pubsub.jsonish.parse_bytes(buf)
 
-            except pubsub.jsonish.ParseError as error :
+            except pubsub.jsonish.ParseError as error:
                 log.error("%s: invalid message: %s", addr, error)
                 continue
 

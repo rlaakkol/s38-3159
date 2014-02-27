@@ -5,10 +5,10 @@ import pubsub.udp
 import logging; log = logging.getLogger('pubsub.protocol')
 import struct
 
-class Error (Exception) :
+class Error (Exception):
     pass
 
-class Message (object) :
+class Message (object):
     SUBSCRIBE   = 0x00
     PUBLISH     = 0x01
     TEARDOWN    = 0x02
@@ -20,10 +20,10 @@ class Message (object) :
     }
 
     @classmethod
-    def type_name (cls, type) :
+    def type_name (cls, type):
         return cls.TYPE_NAMES.get(type, '?')
 
-    def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None, addr=None) :
+    def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None, addr=None):
         self.type = type
         self.flags = flags
         self.ackseq = ackseq
@@ -34,13 +34,13 @@ class Message (object) :
         self.addr = addr
 
     @property
-    def type_str (self) :
+    def type_str (self):
         return Message.type_name(self.type)
 
-    def __str__ (self) :
+    def __str__ (self):
         return "{self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
     
-class Transport (pubsub.udp.Socket) :
+class Transport (pubsub.udp.Socket):
     """
         Bidirectional UDP-based transport protocol.
     """
@@ -51,11 +51,11 @@ class Transport (pubsub.udp.Socket) :
     # support maximum-size UDP messages
     SIZE = 2**16
 
-    def parse (self, buf, **opts) :
+    def parse (self, buf, **opts):
         # header
         magic, type, flags, ackseq, seq = self.HEADER.unpack(buf[:self.HEADER.size])
 
-        if magic != self.MAGIC :
+        if magic != self.MAGIC:
             raise Error("Invalid magic: {magic:x}".format(magic=magic))
 
         # payload
@@ -63,32 +63,32 @@ class Transport (pubsub.udp.Socket) :
  
         return Message(type, flags, ackseq, seq, payload, **opts)
 
-    def build (self, msg) :
+    def build (self, msg):
         # header
         header = self.HEADER.pack(self.MAGIC, msg.type, msg.flags, msg.ackseq, msg.seq)
 
         # payload
-        if msg.payload is None :
+        if msg.payload is None:
             payload = b''
-        else :
+        else:
             payload = pubsub.jsonish.build_bytes(msg.payload)
         
         return header + payload
 
-    def __iter__ (self) :
+    def __iter__ (self):
         """
             Yield parsed Messages received from clients.
         """
 
-        for buf, addr in super(Transport, self).__iter__() :
-            try :
+        for buf, addr in super(Transport, self).__iter__():
+            try:
                 msg = self.parse(buf, addr=addr)
 
-            except Error as error :
+            except Error as error:
                 log.error("%s: invalid message: %s", addr, error)
                 continue
 
-            except pubsub.jsonish.ParseError as error :
+            except pubsub.jsonish.ParseError as error:
                 log.error("%s: invalid payload: %s", addr, error)
                 continue
 
@@ -96,7 +96,7 @@ class Transport (pubsub.udp.Socket) :
 
             yield msg
 
-    def __call__ (self, msg, addr=None) :
+    def __call__ (self, msg, addr=None):
         """
             Send a Message.
         """

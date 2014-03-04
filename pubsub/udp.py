@@ -181,6 +181,7 @@ class Polling:
 
             if timeout < 0:
                 log.warning("immediate timeout: %s@%f = %f", poll_timer, poll_timeout, timeout)
+                raise Timeout(poll_timer)
             else:
                 log.debug("%f...", timeout)
 
@@ -208,3 +209,9 @@ class Polling:
             # timeout
             yield poll_timer, None
 
+class Timeout(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)

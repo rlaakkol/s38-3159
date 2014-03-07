@@ -12,98 +12,62 @@
   \usefonttheme{default}  % or try serif, structurebold, ...
   \setbeamertemplate{navigation symbols}{}
   \setbeamertemplate{caption}[numbered]
-} 
+  } 
 
-\usepackage[english]{babel}
-\usepackage[utf8]{inputenc}
-\usepackage[ELEC]{aaltologo}
-\usepackage{verbatim}
+  \usepackage[english]{babel}
+  \usepackage[utf8]{inputenc}
+  \usepackage[ELEC]{aaltologo}
+  \usepackage{verbatim}
 
 
-\title[SFO protocol]{Sensor Fusion and Optimization: Protocol Specification}
-\author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
-\institute{Aalto ELEC}
-\date{4.2.2014}
+  \title[SFO protocol]{Sensor Fusion and Optimization: Protocol Specification v2.0}
+  \author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
+  \institute{Aalto ELEC}
+  \date11{.3.2014}
 %\logo{\AaltoLogoRandomSmall{0.3}}
 
 \begin{document}
 
 \begin{frame}
-  \titlepage
+\titlepage
 \end{frame}
 
-\begin{frame}{Introduction}
+\begin{frame}{Fragmentation}
 \begin{itemize}
-	\item Unreliable ordered delivery
-    \item Idempotent state updates
+\item IP takes care of fragmentation and reassembly :)
+\item Packet loss more probable for large packets
+\begin{itemize}
+\item Problems may arise with large sensor lists in subscribe $\rightarrow$ Enable gzip
+\end{itemize}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Encoding}
+\begin{frame}{Aggregation}
 \begin{itemize}
-	\item Fixed-length binary header
-    \item Variable-length JSON payload
+\item Sensor type specific listing of available aggregation methods in subscribe-queryresponse
+\item Subscribe message includes method name and one or more parameters, at least \emph{interval}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Header}
-\begin{figure}
-	\centering
-	{\scriptsize\verbatiminput{headerfmt.txt}}
-	\caption{Message format}
-	\label{fig:header}
-\end{figure}
+\begin{frame}{Aggregation: Example}
 \end{frame}
 
-\begin{frame}{Messages}
-\begin{table}
-	\centering
-	\caption{Message variants}
-    {\scriptsize\input{messages.tex}}
-	\label{tbl:messages}
-\end{table}
+\begin{frame}{Security}
+\item Subscribe-query and subscribe-response provide a means for DDoSing. $\rightarrow$ WINRARZ!
 \end{frame}
 
-\begin{frame}{Subscribe}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/subscribe_normal.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Subscribe with packet loss}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/subscribe_lost.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Publish}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/publish_normal.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Teardown}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/teardown.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Limitations}
+\begin{frame}{Header format}
 \begin{itemize}
-	\item Subscription message size grows linearly with sensor count
-    \item No provision for retransmitting lost camera data
-    \begin{itemize}
-    	\item That wouldn't be real-time enough! :)
-    \end{itemize}
+\item Bumped magic
+\item Noack-bit to type field instead of separate ackthis
+\item Added compression bit (also in type field)
 \end{itemize}
 \end{frame}
+
 
 \begin{frame}{Conclusion}
 \begin{itemize}
-	\item Optimize subscribe for reliability
-    \item Keepalive timeouts for detecting dropped clients
-    \item Handle dropped \textbf{teardown-ack}s
-    \item Consider server restarts
+\item Foobarz
 \end{itemize}
 \end{frame}
 

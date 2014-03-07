@@ -93,12 +93,19 @@ messages are defined in Section \ref{payload-format}.
     wants to subscribe to one or more sensors, the payload must be a list with
     the sensor names. The client may subscribe to all sensors. Unsubscribing,
     that is, subscribing to no sensors is done by sending an empty list.
-    
+
 	\item[subscribe-response] Server acknowledgement to the 
 	\emph{subsribe-request} message. The message contains a dictionary which
     contains all the sensors and separately specifies the subscribed sensors.
     The subscribed sensors have a truthy value and the unsubscribed have a falsey
-    value.
+    value. 
+
+  	After receiving the \emph{subscribe-request} message, the server will
+    respond with an falsey \emph{subscribe-response} message, which the client
+    will acknowledge. Only after receiving this acknowledgement message,
+    will the server send the ``real'' acknowledgement with the subscribed sensors.
+    This three-way handshake is done to prevent using the subscribe procedure
+    for DDoS amplification attacks.
 
 	\item[subscribe-update] A message from the server containing an updated
 	list of sensors. This message is sent whenever the sensors are updated,
@@ -160,14 +167,14 @@ A normal sequence of message sent when a client subscribes to some sensors
 is shown in Figure \ref{fig:sub_normal}. The same sequence with lost packets 
 is shown in Figure \ref{fig:sub_lost}.
 
-\begin{figure}[h]
+\begin{figure}[htb]
 	\centering
     \includegraphics[width=\textwidth]{figures/subscribe_normal.pdf}
     \caption{A normal subscription sequence.}
     \label{fig:sub_normal}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htb]
 	\centering
     \includegraphics[width=\textwidth]{figures/subscribe_lost.pdf}
     \caption{A subscription sequence with packet loss.}

@@ -11,6 +11,9 @@
 % Titlepage
 \input{doc-cover.tex}
 
+\tableofcontents
+\newpage
+
 \section{Introduction}
 This document describes a UDP-based protocol for use in a client-server based publish-subscribe model.
 The server receives sensor updates, and publishes the sensor values to subscribed clients.
@@ -272,6 +275,85 @@ The \emph{publish} message for an aggregated sensor will contain a list of such 
     { 'temp:1': -9.10, 'ts': 1394197043.17 },
     { 'temp:1': -9.11, 'ts': 1394197045.27 }
 ] }
+\end{verbatim}
+
+\subsection{Aggregation expressions}
+
+The client may include aggregation expressions in its subscribe requests, whereupon the server will being sending aggregated sensor values in its publish messages.
+
+\begin{verbatim}
+S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
+    P   { 'temp:1': [
+            { 'temp:1': -9.7, 'ts': 1394197037.09 },
+            { 'temp:1': -9.8, 'ts': 1394197039.55 },
+            { 'temp:1': -9.9, 'ts': 1394197041.72 },
+            { 'temp:1': -9.10, 'ts': 1394197043.17 },
+            { 'temp:1': -9.11, 'ts': 1394197045.27 }
+        ] }
+\end{verbatim}
+
+An aggregation expression can contain a variety of parameters:
+
+\begin{description}
+	\item[aggregate]
+		A primitive aggregation method, such as \texttt{max}, \texttt{min}, \texttt{avg} or \texttt{stddev}. 
+		An expression without an \textbf{aggregation} method will not combine values, and function as ``\texttt{last}''.
+		
+	\item[interval]
+		The server will send \emph{publish} messages for the given aggregation subscription using the given interval in seconds.
+		
+	\item[step]
+		For an aggregation method, the server will combine multiple sensor values for each step interval in seconds.
+		For a subscription with \textbf{interval=10} and \textbf{step=2}, the server will send 5 aggregated samples every 10 seconds.
+		
+		This parameter is only defined when an \textbf{aggregate} is also given.
+
+	\item[under/over]
+		The server will only send values whose aggregated value is smaller/larger than the given threshold.	
+		If none of the aggregated values match, no message is sent.
+		
+		This parameter is only valid for sensor values with a defined magnitude, such as \textit{temp} and \textit{gps}.	
+\end{description}
+
+A server may also support additional parameters or aggregation methods.
+
+Further examples of possible aggregation queries and respective publishes:
+\begin{verbatim}
+S       { 'temp:1': { 'aggregate': 'max', 'interval': 10 } }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'max', 'interval': 10, 'step': 10 } }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+
+S       { 'temp:1': { 'aggregate': 'avg', 'interval': 0, 'step': 300 } }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'avg', 'interval': 30, 'step': 300 } }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'avg', 'under': -9.0, 'interval': 30, 'step': 300 } }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'avg', 'over': -9.0, 'interval': 30, 'step': 300 } }
+    P   { 'temp:1': [
+            { 'temp': -8.9, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'gps:1': { 'over': [ -13.337, -13.337 ], 'under': [ 13.3337, 13.3337 ], 'interval': 30 } }
+    P   { 'gps:1': [
+            { 'gps': [ 13.336, -13.336 ], 'ts': 1394197045.27 }
+        ] }
 \end{verbatim}
 
 \subsection{Security Considerations}

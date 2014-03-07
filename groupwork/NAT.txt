@@ -1,0 +1,47 @@
+
+NAT group discussion
+
+Client behind NAT
+- Rendezvous
+	- Need to signal server address to client(s)
+		- Mechanism: DNS, Dynamic DNS, static configuration, etc.
+
+- Connection establishment
+	- Client
+		- Selects random source port
+		- Sends message to server from this port
+		- Listens for replies on the sending port
+	- Server
+		- Listens predefined port
+		- Receives message from client and replies to same port
+		- Needs to send reply from the source address to which the client sent the message
+
+- Keep-alive
+	- Server -> client: send keep-alive messages
+	- Client -> server: reply to keep-alive messages 
+	- Sent every 10 seconds
+
+Server and client behind NAT
+- Rendezvous
+	- Well-known rendezvous server
+	- Server registers itself to rendezvous server
+		- Sends its own IP, STUN IP to rendezvous server which allocates TURN IP
+	- Client can query server from rendezvous server using some identifier
+		- Receives ordered list of server IPs
+		- Mutual authentication?
+
+- Connection establishment
+	- Client
+		- Client tries to subscribe to server using received IPs
+		- Add session ID to enable simultaneous subscription attempts
+	- Server
+		- Similar to first case
+
+- Keep-alive
+	- Similar to first case
+	- Server
+		- Needs to maintain registration to rendezvous server
+
+Optimizations
+- Two-way negotiation fro subscribe and publish
+	- Precondition: client has relaxed NAT

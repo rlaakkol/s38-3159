@@ -6,21 +6,21 @@
 
 import logging; log = logging.getLogger('pubsub.jsonish')
 
-class ParseError (Exception) :
+class ParseError (Exception):
     pass
 
-def parse_next (iter) :
-    while True :
+def parse_next (iter):
+    while True:
         c = next(iter, None)
         
-        if c is None :
+        if c is None:
             break
-        elif c.isspace() :
+        elif c.isspace():
             continue
-        else :
+        else:
             return c
 
-def parse_str (c0, iter) :
+def parse_str (c0, iter):
     """
         Parse ' -> yield char
 
@@ -30,68 +30,68 @@ def parse_str (c0, iter) :
     ESC = {'\\': '\\', '/': '/', "'": "'", '"': '"', 'a': '\a', 'b': '\b', 
         'f': '\f', 'n': '\n', 'r': '\r', 't': '\t', 'v': '\v'}
 
-    while True :
+    while True:
         c = next(iter, None)
 
-        if c is None :
+        if c is None:
             raise ParseError("end-of-string")
 
-        elif c == c0 :
+        elif c == c0:
             return
 
-        elif c == '\\' :
+        elif c == '\\':
             c = next(iter, None)
-            if c == 'x' :
+            if c == 'x':
                 c1 = next(iter, None)
                 c2 = next(iter, None)
-                if c1 and c2 :
+                if c1 and c2:
                     yield chr(int(c1 + c2, 16))
-                else :
+                else:
                     raise ParseError("truncated-string-escape")
 
-            elif c == 'u' :
+            elif c == 'u':
                 c = []
                 for i in range(4):
                     c.append(next(iter, None))
                 if c[0] and c[1] and c[2] and c[3]:
                     yield chr(int(''.join(c), 16))
-                else :
+                else:
                     raise ParseError("truncated-string-escape")
 
-            elif c in ESC :
+            elif c in ESC:
                 yield ESC[c]
 
-            else :
+            else:
                 raise ParseError("invalid-escape-sequence: {c}".format(c=c))
 
         else:
             yield c
 
-def parse_number (c, iter) :
+def parse_number (c, iter):
     """
         Parse number representation -> int/float
     """
 
     str = c
 
-    while True :
+    while True:
         c = next(iter, None)
         
-        if not c :
+        if not c:
             break
 
-        elif c == '.' or c.isdigit() :
+        elif c == '.' or c.isdigit():
             str += c
 
-        else :
+        else:
             break
 
-    if '.' in str :
+    if '.' in str:
         return c, float(str)
-    else :
+    else:
         return c, int(str)
 
-def parse_list (c, iter) :
+def parse_list (c, iter):
     """
         Parse [ -> yield item
 
@@ -99,27 +99,27 @@ def parse_list (c, iter) :
         ['foo', 'bar']
     """
 
-    while True :
+    while True:
         c = parse_next(iter)
 
-        if c == ']' :
+        if c == ']':
             break
 
         item, c = parse_item(c, iter)
         
-        if item is not None :
+        if item is not None:
             yield item
 
-        if c == ',' :
+        if c == ',':
             continue
 
-        elif c == ']' :
+        elif c == ']':
             break
 
-        else :
+        else:
             raise ParseError("invalid item-sep: {c}".format(c=c))
 
-def parse_dict (c, iter) :
+def parse_dict (c, iter):
     """
         Parse { -> yield key, value
 
@@ -127,15 +127,15 @@ def parse_dict (c, iter) :
         [('key', 'value')]
     """
 
-    while True :
+    while True:
         c = parse_next(iter)
 
-        if c == '}' :
+        if c == '}':
             break
 
         key, c = parse_item(c, iter)
         
-        if c != ':' :
+        if c != ':':
             raise ParseError("invalid key-sep: {c}".format(c=c))
 
         c = parse_next(iter)
@@ -143,76 +143,76 @@ def parse_dict (c, iter) :
             
         yield key, value
 
-        if c == ',' :
+        if c == ',':
             continue
 
-        elif c == '}' :
+        elif c == '}':
             break
 
-        else :
+        else:
             raise ParseError("invalid keyval-sep: {c}".format(c=c))
 
-def parse_const (c, iter) :
+def parse_const (c, iter):
     """
         Parse true/false/null -> True/False/None
     """
 
     token = c
 
-    while True :
+    while True:
         c = parse_next(iter)
         
-        if not c :
+        if not c:
             break
-        elif c.isalpha() :
+        elif c.isalpha():
             token += c
-        else :
+        else:
             break
 
-    if token == 'true' :
+    if token == 'true':
         return c, True
 
-    elif token == 'false' :
+    elif token == 'false':
         return c, False
 
-    elif token == 'null' :
+    elif token == 'null':
         return c, None
 
-    else :
+    else:
         raise ParseError("unknown token: {t}".format(t=token))
 
-def parse_item (c, iter) :
+def parse_item (c, iter):
     """
         Parse iterable -> value        
     """
 
-    if c is None :
+    if c is None:
         val = None
         c1 = None
 
-    elif c in ("'", '"') :
+    elif c in ("'", '"'):
         val = ''.join(parse_str(c, iter))
         c1 = parse_next(iter)
 
-    elif c in '+-' or c.isdigit() :
+    elif c in '+-' or c.isdigit():
         c1, val = parse_number(c, iter)
     
-    elif c == '[' :
+    elif c == '[':
         val = list(parse_list(c, iter))
         c1 = parse_next(iter)
 
-    elif c == '{' :
+    elif c == '{':
         val = dict(parse_dict(c, iter))
         c1 = parse_next(iter)
 
-    else :
+    else:
         c1, val = parse_const(c, iter)
         
     log.debug("%s -> %r -> %s", c, val, c1)
 
     return val, c1
 
-def parse (str) :
+def parse (str):
     r"""
         Parse str -> value
 
@@ -246,7 +246,7 @@ def parse (str) :
 
     return val
 
-def parse_bytes (bytes) :
+def parse_bytes (bytes):
     """
         Parse bytes -> value
     """
@@ -254,7 +254,7 @@ def parse_bytes (bytes) :
     # XXX: need to handle binary data...
     return parse(bytes.decode('ascii'))
 
-def build_string (str) :
+def build_string (str):
     r"""
     >>> "".join(build_string('\v'))
     '"\\u000b"'
@@ -268,62 +268,62 @@ def build_string (str) :
     string = '"'
 
     for c in str:
-        if c in QUOTE :
+        if c in QUOTE:
             string += '\\' + QUOTE[c]
-        elif c.isprintable() and ord(c) <= 127 :
+        elif c.isprintable() and ord(c) <= 127:
             string += c
-        else :
+        else:
             string += '\\u{0:04x}'.format(ord(c))
     string += '"'
     yield string
 
-def build_bool (bool) :
-    if bool :
+def build_bool (bool):
+    if bool:
         yield 'true'
-    else :
+    else:
         yield 'false'
 
-def build_number (num) :
+def build_number (num):
     yield str(num)
 
-def build_list (list) :
+def build_list (list):
     start = True
 
     yield '['
 
-    for item in list :
-        if start :
+    for item in list:
+        if start:
             start = False
-        else :
+        else:
             yield ','
 
-        for token in build_item(item) :
+        for token in build_item(item):
             yield token
     
     yield ']'
 
-def build_dict (dict) :
+def build_dict (dict):
     start = True
 
     yield '{'
 
-    for key, value in dict.items() :
-        if start :
+    for key, value in dict.items():
+        if start:
             start = False
-        else :
+        else:
             yield ','
 
-        for token in build_item(key) :
+        for token in build_item(key):
             yield token
 
         yield ':'
 
-        for token in build_item(value) :
+        for token in build_item(value):
             yield token
 
     yield '}'
 
-def build_item (item) :
+def build_item (item):
     """
         Build item -> yield str
 
@@ -337,28 +337,28 @@ def build_item (item) :
         ['{', '1', ':', '2', '}']
     """
 
-    if isinstance(item, str) :
+    if isinstance(item, str):
         return build_string(item)
 
-    if isinstance(item, bool) :
+    if isinstance(item, bool):
         return build_bool(item)
 
-    elif isinstance(item, (int, float)) :
+    elif isinstance(item, (int, float)):
         return build_number(item)
 
-    elif isinstance(item, (list, tuple)) :
+    elif isinstance(item, (list, tuple)):
         return build_list(item)
 
-    elif isinstance(item, dict) :
+    elif isinstance(item, dict):
         return build_dict(item)
 
-    elif item is None :
+    elif item is None:
         return 'null'
 
-    else :
+    else:
         raise ValueError("invalid item: {item!r}".format(item=item))
 
-def build_str (item) :
+def build_str (item):
     """
         >>> print(build_str('foo'))
         "foo"
@@ -373,7 +373,7 @@ def build_str (item) :
     """
     return ''.join(build_item(item))
 
-def build_bytes (item) :
+def build_bytes (item):
     return build_str(item).encode('ascii')
 
 if __name__ == '__main__':

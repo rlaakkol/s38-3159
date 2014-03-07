@@ -30,8 +30,4 @@
         def foo (bar) :
             return 42
 
-*   Block-initiating `:` is separated by whitespace
-
-        if True :
-            return 43
 

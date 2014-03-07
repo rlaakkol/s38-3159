@@ -6,7 +6,7 @@ import logging; log = logging.getLogger('ps-server')
 import pubsub.args
 import pubsub.server
 
-def main (args) :
+def main (args):
     """
         Publish-Subscribe server.
     """

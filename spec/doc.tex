@@ -217,4 +217,64 @@ a publish message is used to estimate the RTT.
 The \emph{publish-ack} message sent by the client includes both the number of messages sent by the server (\emph{ack-seq}) as well as the number of publish messages received by the client (\emph{seq}).
 The server may use this information to determine packet loss for congestion control purposes.
 
+\subsection{Payload format}
+\label{payload-format}
+
+The message payload is a JSON-formatted object.
+
+The JSON values \texttt{false}, \texttt{0}, \texttt{[]} and \texttt{\{\}} are defined to evaluate to boolean false.
+
+\subsubsection{\emph{subscribe-request}}
+The \emph{subsribe-request} message contains either a boolean value, a list of sensor names, or a dict of sensor names and complex aggregation subscriptions.
+
+To subscribe to all available sensors (including sensors becoming available in the future), the client may send a subscribe messsage containing a boolean:
+\begin{verbatim}
+true
+\end{verbatim}
+
+To subscribe to a set of sensors with non-aggregated publishes, the client may send a subscribe message containing:
+\begin{verbatim}
+[ 'temp:1', 'device:1' ]
+\end{verbatim}
+
+To subscribe to a set of sensors with complex aggregation rules, the client may send a subscribe message contaning an aggregation expression dict:
+\begin{verbatim}
+{ 'device:1': true, 'temp:1': { ... } }
+\end{verbatim}
+
+To unsubscribe from all sensors (while keeping the session open), the client may send a boolean false:
+\begin{verbatim}
+false
+\end{verbatim}
+
+\subsubsection{\emph{subscribe-response}}
+The \emph{subribe-response} message contains a dict of sensor names and subscription state as an integer. A sensor that is actively subscribed to per request of the client will be given a positive state. A sensor that the client requested to subscribe to but is not available, or the client has unsubscribed from, is marked as zero. A sensor that the client attempted to subscribe to using an invalid aggregation expression is marked as negative.
+
+\begin{verbatim}
+{ 'temp:1': 1, 'temp:2': 0, 'camera:5': -1 }
+\end{verbatim}
+
+\subsubsection{\emph{publish}}
+
+The \emph{publish} message contains a dict of sensor names and their sensor values, encoded as a dict containing the sensor value, and timestamp, plus a sequence number for non-aggregated values.
+\begin{verbatim}
+{ 'device:1': { 'device': true,                     'seq_no': 36, 'ts': 1394197045.27 } }
+{ 'device:1': { 'device': false,                    'seq_no': 36, 'ts': 1394197049.44 } }
+{ 'gps:1':    { 'gps':    [ 60.182792, 24.796085 ], 'seq_no': 4,  'ts': 1394200030.25 } }
+{ 'camera:1': { 'camera': false,                    'seq_no': 52, 'ts': 1394200084.55 } }
+{ 'camera:1': { 'camera': '...',                    'seq_no': 51, 'ts': 1394200084.48 } }
+{ 'asd:1':    { 'sound':  '...',                    'seq_no': 28, 'ts': 1394200191.92 } }
+\end{verbatim}
+
+The \emph{publish} message for an aggregated sensor will contain a list of such sensor-value dicts instead (indented for clarity):
+\begin{verbatim}
+{ 'temp:1': [
+    { 'temp:1': -9.7,  'ts': 1394197037.09 },
+    { 'temp:1': -9.8,  'ts': 1394197039.55 },
+    { 'temp:1': -9.9,  'ts': 1394197041.72 },
+    { 'temp:1': -9.10, 'ts': 1394197043.17 },
+    { 'temp:1': -9.11, 'ts': 1394197045.27 }
+] }
+\end{verbatim}
+
 \end{document}

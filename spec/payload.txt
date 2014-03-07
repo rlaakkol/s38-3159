@@ -23,7 +23,7 @@ S       [ 'temp_1' ]
 C<->S   Payload
 
 S       true
-    S   { 'temp:1': true }
+    S   { ... } 
     P   { 'device:1': { 'device': true, 'seq_no': 36, 'ts': 1394197045.27 } }
     P   { 'device:1': { 'device': false, 'seq_no': 36, 'ts': 1394197049.44 } }
     P   { 'gps:1': { 'gps': [ 60.182792, 24.796085 ], 'seq_no': 4, 'ts': 1394200030.25 } }

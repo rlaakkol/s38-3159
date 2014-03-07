@@ -30,7 +30,7 @@ The client will periodically acknowledge the received sensor publishes, which is
 It is vitally important for the server to handle clients that disappear, timing out their subscriptions.
 
 The messages are transmitted as UDP packets between the client and server, using a fixed port on the server, and an arbitrary port on the client.
-All messages are transmitted and received using the same pair of addresses/ports.
+All messages are transmitted and received using the same pair of \- addresses/ports.
 If the client changes to a different address, it must create a new subscription to the server, and the previous one will time out.
 
 \section{Message format}
@@ -39,9 +39,10 @@ The protocol is based on a hybrid binary/text encoding, using a fixed-size binar
 The message header format is described in Figure \ref{fig:header}. The 
 Magic-field is an identifier for our protocol and also works as a version
 number. The Type-field denotes the message type (subscribe, unsubscribe, etc.)
-and the A-field denotes the \textit{ackthis} bit. The remaining bits are reserved for future use. 
-The following fields are for sequence numbers: \textbf{Ack-Seq} is used for acknowledging receiver 
-sequence numbers, and \textbf{Seq} is used for the sender sequence number.
+and the A-field denotes the \textit{ackthis} bit. The remaining bits are reserved
+for future use. The following fields are for sequence numbers: \textbf{Ack-Seq} 
+is used for acknowledging receiver sequence numbers, and \textbf{Seq} is used 
+for the sender sequence number.
 
 \begin{figure}
 	\begin{center}
@@ -66,7 +67,9 @@ The range of possible messages and associated header field values are listed in 
 \caption{The header field values.}
 \begin{description}
   \item[T] Type
-  \item[A] The ``Ack this'' flag field (used for \textbf{publish} only)
+  \item[N] The non-acknowledgement flag (used for \textbf{publish} only), zero
+  denotes an acknowledgement and one no acknowledgement
+  \item[C] The compression flag, zero means no compression and one compression
   \item[C] Client
   \item[S] Server
   \item[sseq] subscribe message specific sequence number

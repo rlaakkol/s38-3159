@@ -5,14 +5,14 @@ msc {
 
  a [label="Client"],b [label="Server"];
  --- [label="Subscribed to s1, s2 (on/off) and s3 (cam)"];
-a <= b [label="publish, seq: 1, payload: {'s1': <state>}"];
-a <= b [label="publish, seq: 2, payload: {'s3': <state>}"];
-a <= b [label="publish /w ackthis, seq: 3, payload: {'s2': <state>}"];
+a <= b [label="publish, seq: 1, payload: ..."];
+a <= b [label="publish, seq: 2, payload: ..."];
+a <= b [label="publish /w ackthis, seq: 3, payload: ..."];
 a => b [label="publish-ack, ackseq: 3, seq: 3"],
-a <= b [label="\npublish, seq: 4, payload: {'s3': <state>}"];
+a <= b [label="\npublish, seq: 4, payload: ..."];
 --- [label="timeout since last ackthis"];
-a <= b [label="publish /w ackthis, seq: 5, payload: {'s1': <state>, 's2': <state>}"];
+a <= b [label="publish /w ackthis, seq: 5, payload: ..."];
 a => b [label="publish-ack, ackseq: 5, seq: 5"],
-a <= b [label="\npublish, seq: 6, payload: {'s3': <state>}"];
+a <= b [label="\npublish, seq: 6, payload: ..."];
 
 }

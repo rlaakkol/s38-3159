@@ -1,0 +1,100 @@
+== Version 1.0
+
+C<->S   Payload
+
+Q
+    Q   [ 'temp_1' ]
+
+S       true
+    S   { 'temp_1': true, 'temp_2': false }
+
+S       [ 'temp_1' ]
+    S   { 'temp_1': true, 'temp_2': false }
+
+    P   {'dev_id': 'temp_1', 'sensor_data': '-9.8 C', 'seq_no': 36, 'ts': 1394197045.27}
+    P   {'dev_id': 'device_1', 'sensor_data': 'ON', 'seq_no': 1, 'ts': 1394200044.29}
+    P   {'dev_id': 'gps_1', 'sensor_data': '[60.182715, 24.79593]', 'seq_no': 4, 'ts': 1394200030.25}
+    P   {'dev_id': 'camera_1', 'sensor_data': 'NO_MOTION', 'seq_no': 52, 'ts': 1394200084.55
+    P   {'dev_id': 'camera_1', 'sensor_data': '...', 'seq_no': 51, 'ts': 1394200084.48}
+    P   {'dev_id': 'asd_1', 'sensor_data': '...', 'seq_no': 280, 'ts': 1394200191.92}
+
+== Version 2.0
+
+C<->S   Payload
+
+S       true
+    S   { 'temp:1': true }
+    P   { 'device:1': { 'device': true, 'seq_no': 36, 'ts': 1394197045.27 } }
+    P   { 'device:1': { 'device': false, 'seq_no': 36, 'ts': 1394197049.44 } }
+    P   { 'gps:1': { 'gps': [ 60.182792, 24.796085 ], 'seq_no': 4, 'ts': 1394200030.25 } }
+    P   { 'camera:1': { 'camera': false, 'seq_no': 52, 'ts': 1394200084.55 } }
+    P   { 'camera:1': { 'camera': '...', 'seq_no': 51, 'ts': 1394200084.48 } }
+    P   { 'asd:1': { 'sound': '...', 'seq_no': 280, 'ts': 1394200191.92} }
+
+
+S       [ 'temp:1' ]
+    S   { 'temp:1': true }
+
+S       { 'temp:1': true }
+    S   { 'temp:1': true }
+    P   { 'temp:1': { 'temp': -9.8, 'seq_no': 36, 'ts': 1394197045.27 } }
+   
+
+
+
+S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp:1': -9.7, 'ts': 1394197037.09 }
+            { 'temp:1': -9.8, 'ts': 1394197039.55 }
+            { 'temp:1': -9.9, 'ts': 1394197041.72 }
+            { 'temp:1': -9.10, 'ts': 1394197043.17 }
+            { 'temp:1': -9.11, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'max', 'interval': 10 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'max', 'interval': 10, 'step': 10 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 }
+        ] }
+
+
+S       { 'temp:1': { 'aggregate': 'avg', 'interval': 0, 'step': 300 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 } 
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'avg', 'interval': 30, 'step': 300 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 } 
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'avg', 'under': -9.0, 'interval': 30, 'step': 300 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp': -9.8, 'ts': 1394197045.27 } 
+        ] }
+
+S       { 'temp:1': { 'aggregate': 'avg', 'over': -9.0, 'interval': 30, 'step': 300 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp': -8.9, 'ts': 1394197045.27 } 
+        ] }
+
+S       { 'gps:1': { 'over': [ -13.337, -13.337 ], 'under': [ 13.3337, 13.3337 ], 'interval': 30 } }
+    S   { 'gps:1': 1 }
+    P   { 'gps:1': [
+            { 'gps': [ 13.336, -13.336 ], 'ts': 1394197045.27 } 
+        ] }
+
+S       { 'camera:1': { 'method': 'avg', } }
+    S   { 'camera:1': -1, 'temp:1': 0 }
+

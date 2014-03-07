@@ -63,7 +63,7 @@ The range of possible messages and associated header field values are listed in 
 \caption{The header field values.}
 \begin{description}
   \item[T] Type
-  \item[A] The "Ack this" flag field (used for \textbf{publish} only)
+  \item[A] The ``Ack this'' flag field (used for \textbf{publish} only)
   \item[C] Client
   \item[S] Server
   \item[sseq] subscribe message specific sequence number
@@ -75,31 +75,28 @@ The range of possible messages and associated header field values are listed in 
 
 \pagebreak
 
-Below is a list of the various message variants and their semantics:
+Below is a list of the various messages and their semantics. The payloads of the
+messages are defined in Section \ref{payload-format}.
 \begin{description}
 	\item[subscribe-query] Client initiated query of the available 
 	sensors. The server sends the sensor list and the client processes it.
     
 	\item[subscribe-queryresponse] Response from the server to 
 	\emph{subscribe-query}, contains a list of available sensor names. 
-    The payload must have the following format: \verb|["sensor1", "sensor2",...]|.
     
 	\item[subscribe-request] A message sent by the client to update its sensor
 	subscription. Contains a list of the sensors to which the client wants to
 	subscribe. This message must be acknowledged by the server. If the client
     wants to subscribe to one or more sensors, the payload must be a list with
-    the sensor names: \verb|["sensor1","sensor2",...]|. If the client wants
-    to subscribe to all sensors, the payload must be \verb|true|. Unsubscribing,
-    that is, subscribing to no sensors is done by sending an empty list. The
-    payload must thus be \verb|[]|.
+    the sensor names. The client may subscribe to all sensors. Unsubscribing,
+    that is, subscribing to no sensors is done by sending an empty list.
     
 	\item[subscribe-response] Server acknowledgement to the 
 	\emph{subsribe-request} message. The message contains a dictionary which
     contains all the sensors and separately specifies the subscribed sensors.
-    A subscribed sensor has the dictionary value of \verb|true| and an unsubcribed
-    has the value \verb|false|. Thus the payload must have the following format:
-    \\ \verb|{"sensor1":false,"sensor2":false,"sensor3":true,...}|.
-    
+    The subscribed sensors have a truthy value and the unsubscribed have a falsey
+    value.
+
 	\item[subscribe-update] A message from the server containing an updated
 	list of sensors. This message is sent whenever the sensors are updated,
 	that is, a sensor is added or removed. This message needs to be acknowledged 
@@ -112,9 +109,9 @@ Below is a list of the various message variants and their semantics:
 	\item[publish] The server-initiated message contains the values of
 	the subscribed sensors. If this message is lost, it is not retransmitted but
 	new values are sent instead. The payload is a list with the sensor values 
-    (dictionary) from each sensor, an example: \verb|[{...},{...}]|.
+    (dictionary) from each sensor.
     
-	\item[publish (/w ackthis)] Like the "normal" \emph{publish} message
+	\item[publish (/w ackthis)] Like the ``normal'' \emph{publish} message
 	but this must be acknowledged by the client. The acknowledgement is used
 	by the server to check whether the other party is still	available, and measure
     congestion. This message has the same payload format as the unacknowledged
@@ -193,7 +190,7 @@ Whenever a new sensor value is received at the server it will be sent to the
 clients who are subscribed to the selected sensor. The updates are sent with
 the \emph{publish} message, which contains the current value of the sensor.
 These messages are not retransmitted and generally not acknowledged, except in the case of the on/off -type). Publish
-messages with the "ackthis" bit are sent every $T_s$ seconds even if there
+messages with the ``ackthis'' bit are sent every $T_s$ seconds even if there
 is no sensor data to publish. The payload of these messages are last states
 of the subscribed on/off sensors. These messages must be acknowledged by the client 
 with the \emph{publish-ack} message, but the server may continue sending normal \emph{publish} messages without waiting for the ack to arrive. A publish message
@@ -206,7 +203,7 @@ sequence is shown in Figure \ref{fig:pub_normal}.
     \label{fig:pub_normal}
 \end{figure}
 
-The purpose of these messages is to act as a "keepalive" mechanism (and also double
+The purpose of these messages is to act as a ``keepalive'' mechanism (and also double
 as a reliability mechanism for the on/off sensors). If acknowledgements from a client
 are not received within a time of $N \cdot T_s$ seconds for some value of $N$, the 
 server will timeout the client. The same mechanism also works in the opposite 

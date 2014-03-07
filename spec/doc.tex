@@ -297,7 +297,7 @@ An aggregation expression can contain a variety of parameters:
 \begin{description}
 	\item[aggregate]
 		A primitive aggregation method, such as \texttt{max}, \texttt{min}, \texttt{avg} or \texttt{stddev}. 
-		An expression without an \textbf{aggregation} method will not combine values, and function as "\texttt{last}".
+		An expression without an \textbf{aggregation} method will not combine values, and function as ``\texttt{last}''.
 		
 	\item[interval]
 		The server will send \emph{publish} messages for the given aggregation subscription using the given interval in seconds.
@@ -316,7 +316,6 @@ An aggregation expression can contain a variety of parameters:
 \end{description}
 
 A server may also support additional parameters or aggregation methods.
-
 
 Further examples of possible aggregation queries and respective publishes:
 \begin{verbatim}
@@ -356,5 +355,36 @@ S       { 'gps:1': { 'over': [ -13.337, -13.337 ], 'under': [ 13.3337, 13.3337 ]
             { 'gps': [ 13.336, -13.336 ], 'ts': 1394197045.27 }
         ] }
 \end{verbatim}
+
+\subsection{Security Considerations}
+The greatest security risk in the protocol is the possibility of causing DDos
+attacks. The first attack vector is that the client repeateadly ask for the 
+sensor list. When there are enough requests sending the responses will consume
+the server's resources. The server operator should limit the rate of messages per
+client to a sensible value. 
+
+In order to prevent reflection attacks, the client must send an acknowledgement
+to the \emph{queryresponse} message before \emph{publish} messages are sent.
+This procedure emulates the three way handshake of TCP and prevents the usage
+of spoofed IP addresses in launching an attack.
+
+Improper parameters to aggregation function parameters, e.g. a very small value
+to the \emph{interval} parameter causing a flood of messages or a very large
+\emph{step} value causing resource drain on the server, may cause server
+unavailability. The server administrator may define inapproriate aggregation 
+function values which the server rejects by sending an error.
+
+The lack of authentication enables an attacker to set up a spoofed server and
+send potentially harmful sensor values to connected clients. While it does not
+present a major threat currently, problems may arise in the future. A solution
+to this problem is to perform mutual authentication between the server and 
+connecting clients. This requires maintaining a registery of legitimate
+servers which the clients should use the validate the ``fingerprint'' of the
+server. The authentication messages must be signed in order to detect possible 
+tampering of messages. Encryption may be implemented to improve the security of 
+the protocol.
+
+%Message signatures and end-to-end encryption may be implemented to prevent 
+%tampering with messages and unauthorized eavesdropping. 
 
 \end{document}

@@ -65,8 +65,8 @@ The range of possible messages and associated header field values are listed in 
 \begin{table}
 \caption{The header field values.}
 \begin{description}
+  \item[N] The ``NoAck'' flag field (used for \textbf{publish} only)
   \item[T] Type
-  \item[A] The ``Ack this'' flag field (used for \textbf{publish} only)
   \item[C] Client
   \item[S] Server
   \item[sseq] subscribe message specific sequence number
@@ -114,7 +114,7 @@ messages are defined in Section \ref{payload-format}.
 	new values are sent instead. The payload is a list with the sensor values 
     (dictionary) from each sensor.
     
-	\item[publish (/w ackthis)] Like the ``normal'' \emph{publish} message
+	\item[publish (/w NoAck unset)] Like the ``normal'' \emph{publish} message
 	but this must be acknowledged by the client. The acknowledgement is used
 	by the server to check whether the other party is still	available, and measure
     congestion. This message has the same payload format as the unacknowledged
@@ -193,7 +193,7 @@ Whenever a new sensor value is received at the server it will be sent to the
 clients who are subscribed to the selected sensor. The updates are sent with
 the \emph{publish} message, which contains the current value of the sensor.
 These messages are not retransmitted and generally not acknowledged, except in the case of the on/off -type). Publish
-messages with the ``ackthis'' bit are sent every $T_s$ seconds even if there
+messages with the ``NoAck'' bit unset are sent every $T_s$ seconds even if there
 is no sensor data to publish. The payload of these messages are last states
 of the subscribed on/off sensors. These messages must be acknowledged by the client 
 with the \emph{publish-ack} message, but the server may continue sending normal \emph{publish} messages without waiting for the ack to arrive. A publish message

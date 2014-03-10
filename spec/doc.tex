@@ -382,7 +382,7 @@ A possible design mitigation to address this issue would be to require the clien
 In order to prevent reflection attacks, the client must acknowledge the minimal \emph{subscribe-response} message before the initial heavyweight \emph{subscribe-update} and \emph{publish} messages are sent.
 This procedure emulates the three-way handshake in TCP and prevents the use of spoofed IP addresses in launching amplification attacks.
 
-However, the current protocol design still requires the server to establish significant server state upon the reciept of the emph{subscribe-request} message, to maintain the \textit{seq} and \textit{subscription} state for the resulting \emph{subscribe-update} message. Better protocol design by having the client send its \textit{subscription} in conjunction with the \emph{subscribe-ack} message could alleviate this.
+However, the current protocol design still requires the server to establish significant server state upon the reciept of the \emph{subscribe-request} message, to maintain the \textit{seq} and \textit{subscription} state for the resulting \emph{subscribe-update} message. Better protocol design by having the client send its \textit{subscription} in conjunction with the \emph{subscribe-ack} message could alleviate this.
 
 Improper values of aggregation function parameters also have the potential to cause issues.
 A very small \textbf{interval} parameter value would cause a flood of \emph{publish} messages.

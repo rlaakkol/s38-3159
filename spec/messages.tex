@@ -3,32 +3,32 @@
 						& 							& \multicolumn{4}{c|}{Header field value} &	\\
 Message					& Direction 				& N	& T	& Ack-seq				& Seq	&	Payload \\
 \hline
-subscribe-query			& C $\rightharpoonup$ S		& 1	& 0 	& 0						& 0	&	\\
+subscribe-query			& Cl $\rightharpoonup$ S		& 1	& 0 	& 0						& 0	&	\\
 \hline
-subscribe-queryresponse	& C $\leftharpoondown$ S	& 1	& 0		& 0						& 0	&	x \\
+subscribe-queryresponse	& Cl $\leftharpoondown$ S	& 1	& 0		& 0						& 0	&	x \\
 \hline
-subscribe-request		& C $\rightharpoonup$ S		& 1	& 0		& 0						& \emph{C-sseq++} &
+subscribe-request		& Cl $\rightharpoonup$ S		& 1	& 0		& 0						& \emph{Cl-sseq++} &
 	x \\
 \hline
-subscribe-response		& C $\leftharpoondown$ S	& 1	& 0		& \emph{C-sseq}	& \emph{S-sseq++} &	
+subscribe-response		& Cl $\leftharpoondown$ S	& 1	& 0		& \emph{Cl-sseq}	& \emph{S-sseq++} &	
 	x \\
 \hline
-subscribe-update		& C $\leftharpoonup$ S		& 1	& 0		& 0						& \emph{S-sseq++} &
+subscribe-update		& Cl $\leftharpoonup$ S		& 1	& 0		& 0						& \emph{S-sseq++} &
 	x \\
 \hline
-subscribe-ack			& C $\rightharpoondown$ S	& 1	& 0		& \emph{S-sseq}	& 0	&	\\
+subscribe-ack			& Cl $\rightharpoondown$ S	& 1	& 0		& \emph{S-sseq}	& 0	&	\\
 \hline
-publish					& C $\leftharpoonup$ S		& 1	& 1		& 0						& \emph{S-pseq++} &
+publish					& Cl $\leftharpoonup$ S		& 1	& 1		& 0						& \emph{S-pseq++} &
 	x \\
 \hline
-publish	(/w NoAck)      & C $\leftharpoonup$ S		& 0	& 1		& 0						& \emph{S-pseq++} &
+publish	(/w NoAck)      & Cl $\leftharpoonup$ S		& 0	& 1		& 0						& \emph{S-pseq++} &
 	x \\
 \hline
-publish-ack				& C $\rightharpoondown$ S	& 1	& 1		& \emph{S-pseq}			& \emph{nrecvd}	&	\\
+publish-ack				& Cl $\rightharpoondown$ S	& 1	& 1		& \emph{S-pseq}			& \emph{nrecvd}	&	\\
 \hline
-teardown		      & C $\rightharpoonup$ S		& 1	& 2		& 0			& 0	& \\
+teardown		      & Cl $\rightharpoonup$ S		& 1	& 2		& 0			& 0	& \\
 \hline
-teardown-ack		& C $\leftharpoondown$ S 		& 1 & 2		& 0			& 0 &	\\
+teardown-ack		& Cl $\leftharpoondown$ S 		& 1 & 2		& 0			& 0 &	\\
 			
 \hline
 \end{tabular}

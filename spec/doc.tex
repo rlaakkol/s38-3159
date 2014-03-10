@@ -66,12 +66,11 @@ The range of possible messages and associated header field values are listed in 
 \begin{table}
 \caption{The header field values.}
 \begin{description}
-  \item[N] The ``NoAck'' flag field (used for \textbf{publish} only)
-  \item[T] Type
-  \item[N] The non-acknowledgement flag (used for \textbf{publish} only), zero
+  \item[N] The non-acknowledgement (``NoAck'') flag (used for \textbf{publish} only), zero
   denotes an acknowledgement and one no acknowledgement
   \item[C] The compression flag, zero means no compression and one compression
-  \item[C] Client
+  \item[T] Type
+  \item[Cl] Client
   \item[S] Server
   \item[sseq] subscribe message specific sequence number
   \item[pseq] publish message specific sequence number

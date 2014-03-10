@@ -43,8 +43,7 @@ the flags are described in Table \ref{tbl:header_values}. The remaining bits are
 reserved for future use. The following fields are for sequence numbers: 
 \textbf{Ack-Seq} is used for acknowledging receiver sequence numbers, and 
 \textbf{Seq} is used for the sender sequence number. The sender sequence number
-should start from an arbitrary value that must not be zero. On wraparound, the
-sequence number must be set to one.
+should start from an arbitrary value that must not be zero, and must wrap around to $1$. Sequence number comparisons should behave cyclically mod $2^{31}$, i.e. $2^{31} > 1 > 2^{32} - 1 > 2^{31} + 1$.
 
 \begin{figure}
 	\begin{center}

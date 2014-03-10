@@ -72,11 +72,12 @@ The range of possible messages and associated header field values are listed in 
   \item[N] The non-acknowledgement (``NoAck'') flag (used for \textbf{publish} only), zero
   denotes an acknowledgement and one no acknowledgement
   \item[C] The compression flag, zero means no compression and one compression
+  with the \texttt{gzip} file format
   \item[T/Type] Message type field
   \item[Cl] Client
   \item[S] Server
-  \item[sseq] subscribe message specific sequence number
-  \item[pseq] publish message specific sequence number
+  \item[sseq] Subscribe message specific sequence number
+  \item[pseq] Publish message specific sequence number
   \item[nrecvd] Number of publishes received by the client so far
 \end{description}
 \label{tbl:header_values}
@@ -134,7 +135,7 @@ messages are defined in Section \ref{payload-format}.
     \emph{publish} message.
     
 	\item[publish-ack] Message from the client which acknowledges the previous
-	\emph{publish (/w ackthis)} message.
+	\emph{publish (/w NoAck unset)} message.
     
 	\item[teardown] A message sent by the client indicating that is 
 	wants to end the communication with the server. This message must be 
@@ -151,8 +152,9 @@ messages are defined in Section \ref{payload-format}.
 
 The \emph{subscribe-*} messages have a timer mechanism.
 When a message is sent with an incremented sequence number, the timer is set.
-Receiving a message with the matching \emph{type} and \emph{ack-seq} field will clear the timer.
-If the timer expires after $T$ seconds, the previously sent message will be retransmitted (using the same seq).
+Receiving a message with the matching \emph{type} and \emph{ack-seq} field will 
+clear the timer. If the timer expires after $T$ seconds, where $T$ is at most
+ten seconds but may be smaller, the previously sent message will be retransmitted (using the same seq).
 Handling of received messages is based on the \emph{seq} field.
 The highest received \emph{seq} is recorded, acked and processed.
 A duplicate \emph{seq} corresponding to the updated seq is considered a duplicate, and is acked without being processed.
@@ -198,7 +200,9 @@ client now wants to change its subscription, it may send a new
 A client terminates the connection by sending the \emph{teardown} message to the
 server. It expects a response from the server and continues sending the same
 message until a response is received. The server responds by sending a
-\emph{teardown-ack} message and waits for timeout $T_t$ for retransmits of the \emph{teardown} message. If no retransmits arrive, the server may release its resources
+\emph{teardown-ack} message and waits for timeout $T_t$ (at most ten seconds but
+may be smaller) for retransmits of the \emph{teardown} message. If no retransmits 
+arrive, the server may release its resources
 related to the client. If the server receives a \emph{teardown} from a client that has no resources currently allocated for it, the server only responds with the \emph{teardown-ack}
 
 \subsection{Publish}
@@ -209,7 +213,8 @@ These messages are not retransmitted and generally not acknowledged, except in t
 messages with the ``NoAck'' bit unset are sent every $T_s$ seconds even if there
 is no sensor data to publish. The payload of these messages are last states
 of the subscribed on/off sensors. These messages must be acknowledged by the client 
-with the \emph{publish-ack} message, but the server may continue sending normal \emph{publish} messages without waiting for the ack to arrive. A publish message
+with the \emph{publish-ack} message, but the server may continue sending normal 
+\emph{publish} messages without waiting for the ack to arrive. A publish message
 sequence is shown in Figure \ref{fig:pub_normal}.
 
 \begin{figure}
@@ -225,8 +230,9 @@ are not received within a time of $N \cdot T_s$ seconds for some value of $N$, t
 server will timeout the client. The same mechanism also works in the opposite 
 direction, if publish messages are not received from the server within 
 $M \cdot T_s$ seconds for some value of $M$,
-the server is considered to be unavailable and the client will time out. The time it takes for an acknowledgement to be received after the sending of
-a publish message is used to estimate the RTT.
+the server is considered to be unavailable and the client will time out. The 
+$T_s$ timeout must be ten seconds and $M \geq 3, N \geq 3$. The time it takes for an acknowledgement to be received after the sending of
+a publish message may be used to estimate the RTT.
 The \emph{publish-ack} message sent by the client includes both the number of messages sent by the server (\emph{ack-seq}) as well as the number of publish messages received by the client (\emph{seq}).
 The server may use this information to determine packet loss for congestion control purposes.
 
@@ -240,7 +246,7 @@ The JSON values \texttt{false}, \texttt{0}, \texttt{[]} and \texttt{\{\}} are de
 \subsubsection{\emph{subscribe-request}}
 The \emph{subsribe-request} message contains either a boolean value, a list of sensor names, or a dict of sensor names and complex aggregation subscriptions.
 
-To subscribe to all available sensors (including sensors becoming available in the future), the client may send a subscribe messsage containing a boolean:
+To subscribe to all available sensors (including sensors becoming available in the future), the client may send a subscribe message containing a boolean:
 \begin{verbatim}
 true
 \end{verbatim}
@@ -250,7 +256,7 @@ To subscribe to a set of sensors with non-aggregated publishes, the client may s
 [ 'temp:1', 'device:1' ]
 \end{verbatim}
 
-To subscribe to a set of sensors with complex aggregation rules, the client may send a subscribe message contaning an aggregation expression dict:
+To subscribe to a set of sensors with complex aggregation rules, the client may send a subscribe message containing an aggregation expression dict:
 \begin{verbatim}
 { 'device:1': true, 'temp:1': { ... } }
 \end{verbatim}
@@ -369,21 +375,21 @@ S       { 'gps:1': { 'over': [ -13.337, -13.337 ], 'under': [ 13.3337, 13.3337 ]
         ] }
 \end{verbatim}
 
-\subsection{Security Considerations}
+\subsection{Security considerations}
 The greatest security risk in the protocol is the possibility of causing DDos
-attacks. The first attack vector is that the client repeateadly ask for the 
+attacks. The first attack vector is that the client repeatedly ask for the 
 sensor list. When there are enough requests sending the responses will consume
 the server's resources. The server operator should limit the rate of messages per
 client to a sensible value. 
 
 In order to prevent reflection attacks, the client must send an acknowledgement
-to the \emph{queryresponse} message before \emph{publish} messages are sent.
-This procedure emulates the three way handshake of TCP and prevents the usage
+to the \emph{subscribe-queryresponse} message before \emph{publish} messages are sent.
+This procedure emulates the three-way handshake of TCP and prevents the usage
 of spoofed IP addresses in launching an attack.
 
 Improper parameters to aggregation function parameters, e.g. a very small value
-to the \emph{interval} parameter causing a flood of messages or a very large
-\emph{step} value causing resource drain on the server, may cause server
+to the \textbf{interval} parameter causing a flood of messages or a very large
+\textbf{step} value causing resource drain on the server, may cause server
 unavailability. The server administrator may define inappropriate aggregation 
 function values which the server rejects by sending an error.
 

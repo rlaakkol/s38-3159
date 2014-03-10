@@ -68,10 +68,10 @@ The range of possible messages and associated header field values are listed in 
 \caption{The header field values.}
 \begin{description}
   \item[Magic] This field has value \texttt{0x43} for protocol version 2
-  \item[N] The non-acknowledgement (``NoAck'') flag (used for \textbf{publish} only), zero
-  denotes an acknowledgement and one no acknowledgement
-  \item[C] The compression flag, zero means no compression and one compression
-  with the \texttt{gzip} file format
+  \item[N] 	The non-acknowledgement (``NoAck'') flag (only used for \textbf{publish}) being set indicates that
+  			the ack message that would normally be sent in response to a nonzero seq should be supressed.
+  \item[C] 	The compression flag being set means that the payload has been compressed using the
+  			\texttt{zlib} DEFLATE format.
   \item[T/Type] Message type field
   \item[Cl] Client
   \item[S] Server

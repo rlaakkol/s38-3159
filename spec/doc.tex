@@ -200,9 +200,7 @@ client now wants to change its subscription, it may send a new
 A client terminates the connection by sending the \emph{teardown} message to the
 server. It expects a response from the server and continues sending the same
 message until a response is received. The server responds by sending a
-\emph{teardown-ack} message and waits for timeout $T_t$ (at most ten seconds but
-may be smaller) for retransmits of the \emph{teardown} message. If no retransmits 
-arrive, the server may release its resources
+\emph{teardown-ack} message and may release its resources
 related to the client. If the server receives a \emph{teardown} from a client that has no resources currently allocated for it, the server only responds with the \emph{teardown-ack}
 
 \subsection{Publish}

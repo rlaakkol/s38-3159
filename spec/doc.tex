@@ -381,9 +381,9 @@ the server's resources. The server operator should limit the rate of messages pe
 client to a sensible value. 
 
 In order to prevent reflection attacks, the client must send an acknowledgement
-to the \emph{subscribe-queryresponse} message before \emph{publish} messages are sent.
+to the \emph{subscribe-response} message before \emph{publish} messages are sent.
 This procedure emulates the three-way handshake of TCP and prevents the usage
-of spoofed IP addresses in launching an attack.
+of spoofed IP addresses in launching an amplification attack.
 
 Improper parameters to aggregation function parameters, e.g. a very small value
 to the \textbf{interval} parameter causing a flood of messages or a very large

@@ -66,10 +66,11 @@ The range of possible messages and associated header field values are listed in 
 \begin{table}
 \caption{The header field values.}
 \begin{description}
+  \item[Magic] This field has value \texttt{0x43} for protocol version 2
   \item[N] The non-acknowledgement (``NoAck'') flag (used for \textbf{publish} only), zero
   denotes an acknowledgement and one no acknowledgement
   \item[C] The compression flag, zero means no compression and one compression
-  \item[T] Type
+  \item[T/Type] Message type field
   \item[Cl] Client
   \item[S] Server
   \item[sseq] subscribe message specific sequence number

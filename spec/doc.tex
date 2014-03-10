@@ -42,7 +42,9 @@ number. The Type-field denotes the message type (subscribe, unsubscribe, etc.),
 the flags are described in Table \ref{tbl:header_values}. The remaining bits are 
 reserved for future use. The following fields are for sequence numbers: 
 \textbf{Ack-Seq} is used for acknowledging receiver sequence numbers, and 
-\textbf{Seq} is used for the sender sequence number.
+\textbf{Seq} is used for the sender sequence number. The sender sequence number
+should start from an arbitrary value that must not be zero. On wraparound, the
+sequence number must be set to one.
 
 \begin{figure}
 	\begin{center}
@@ -382,14 +384,14 @@ of spoofed IP addresses in launching an attack.
 Improper parameters to aggregation function parameters, e.g. a very small value
 to the \emph{interval} parameter causing a flood of messages or a very large
 \emph{step} value causing resource drain on the server, may cause server
-unavailability. The server administrator may define inapproriate aggregation 
+unavailability. The server administrator may define inappropriate aggregation 
 function values which the server rejects by sending an error.
 
 The lack of authentication enables an attacker to set up a spoofed server and
 send potentially harmful sensor values to connected clients. While it does not
 present a major threat currently, problems may arise in the future. A solution
 to this problem is to perform mutual authentication between the server and 
-connecting clients. This requires maintaining a registery of legitimate
+connecting clients. This requires maintaining a registry of legitimate
 servers which the clients should use the validate the ``fingerprint'' of the
 server. The authentication messages must be signed in order to detect possible 
 tampering of messages. Encryption may be implemented to improve the security of 

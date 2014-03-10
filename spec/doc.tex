@@ -169,9 +169,9 @@ The server will then reply with a \emph{subscribe-queryresponse} message, which 
 
 Setting up the subscription session uses a \emph{subscribe-request}/\emph{subscribe-request}/\emph{subscribe-ack}/\emph{subscribe-update} handshake sequence.
 The client initiates the session by sending a \emph{subscribe-request} message, which contains a list of sensors to which the client wants to subscribe.
-The server will then initially respond with a \emph{subscribe-response} message with an empty payload.
+The server will then initially respond with a \emph{subscribe-response} message with an empty payload, representing the fact that the server has allocated state for the client, but the subscription is not yet active.
 The client completes the three-way handshake using an \emph{subscribe-ack} message, which initiates the session.
-The server immediately sends the initial \emph{subscribe-update} message containing the new subscription state, and starts sending \texttt{publish} messages if appropriate.
+The server immediately sends an initial \emph{subscribe-update} message containing the activated subscription state, and starts sending \texttt{publish} messages as required.
 
 A normal sequence of message sent when a client subscribes to some sensors is shown in Figure \ref{fig:sub_normal}.
 The same sequence with lost packets is shown in Figure \ref{fig:sub_lost}.
@@ -372,22 +372,22 @@ S       { 'gps:1': { 'over': [ -13.337, -13.337 ], 'under': [ 13.3337, 13.3337 ]
 \end{verbatim}
 
 \subsection{Security considerations}
-The greatest security risk in the protocol is the possibility of causing DDos
-attacks. The first attack vector is that the client repeatedly ask for the 
-sensor list. When there are enough requests sending the responses will consume
-the server's resources. The server operator should limit the rate of messages per
-client to a sensible value. 
+The main security risk considered in the design of the protocol is the possibility for DoS reflection attacks using spoofed source adddresses.
 
-In order to prevent reflection attacks, the client must send an acknowledgement
-to the \emph{subscribe-response} message before \emph{publish} messages are sent.
-This procedure emulates the three-way handshake of TCP and prevents the usage
-of spoofed IP addresses in launching an amplification attack.
+The first attack vector is a client repeatedly querying for the sensor list using \emph{subscribe-query} messages.
+This will cause a flood of large \emph{subscribe-queryresponse} messages, and consume server bandwidth.
+The server operator should limit the rate of messages per client to a sensible value, as the rate of \emph{subscribe-query} messages is expected to be very low in normal use, as clients should instead establish a subscribe session.
+A possible design mitigation to address this issue would be to require the client to pad its \emph{subscribe-query} message with repetitions of the four-character ASCII constant \texttt{ASDF} up to some arbitrary length, with the server limiting its \emph{subscribe-queryresponse} up to the size of the padded \emph{subscribe-query} message.
 
-Improper parameters to aggregation function parameters, e.g. a very small value
-to the \textbf{interval} parameter causing a flood of messages or a very large
-\textbf{step} value causing resource drain on the server, may cause server
-unavailability. The server administrator may define inappropriate aggregation 
-function values which the server rejects by sending an error.
+In order to prevent reflection attacks, the client must acknowledge the minimal \emph{subscribe-response} message before the initial heavyweight \emph{subscribe-update} and \emph{publish} messages are sent.
+This procedure emulates the three-way handshake in TCP and prevents the use of spoofed IP addresses in launching amplification attacks.
+
+However, the current protocol design still requires the server to establish significant server state upon the reciept of the emph{subscribe-request} message, to maintain the \textit{seq} and \textit{subscription} state for the resulting \emph{subscribe-update} message. Better protocol design by having the client send its \textit{subscription} in conjunction with the \emph{subscribe-ack} message could alleviate this.
+
+Improper values of aggregation function parameters also have the potential to cause issues.
+A very small \textbf{interval} parameter value would cause a flood of \emph{publish} messages.
+A very large \textbf{step} value would cause the server to consume a large amount of resources aggregating values.
+The server administrator should define appropriate limits for these parameters to prevent server unavailability, rejecting the aggregation subscription by responding with a \texttt{-1} value in the \emph{subscribe-response}.
 
 The lack of authentication enables an attacker to set up a spoofed server and
 send potentially harmful sensor values to connected clients. While it does not

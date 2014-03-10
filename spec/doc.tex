@@ -160,19 +160,21 @@ A duplicate \emph{seq} corresponding to the updated seq is considered a duplicat
 A lower \emph{seq} than recorded indicates packet reordering and is dropped.
 
 \section{Protocol description}
+
+
 \subsection{Subscribing and unsubscribing}
-When a client wants to subscribe to some sensors it will start by sending a 
-\emph{subscribe-query} message to the server. The server will then reply with
-a \emph{subscribe-queryresponse} message, which contains the list of currently
-available sensors. The client subscribes and unsubscribes to sensors by sending a 
-\emph{subscribe-request} message, which contains a list of sensors to which 
-the client wants to subscribe. The server will then respond with the
-\emph{subscribe-response} which contains the sensors to which the client is
-subscribed. Finally, the client responds to the previous message with the 
-\emph{subscribe-ack} message to acknowledge its reception of the message.
-A normal sequence of message sent when a client subscribes to some sensors
-is shown in Figure \ref{fig:sub_normal}. The same sequence with lost packets 
-is shown in Figure \ref{fig:sub_lost}.
+The protocol supports an optional \emph{subscribe-query}/\emph{subscribe-queryresponse} handshake which the client can use to prepare its subscription list.
+The client sends a \emph{subscribe-query} message to the server.
+The server will then reply with a \emph{subscribe-queryresponse} message, which contains the list of currently available sensors.
+
+Setting up the subscription session uses a \emph{subscribe-request}/\emph{subscribe-request}/\emph{subscribe-ack}/\emph{subscribe-update} handshake sequence.
+The client initiates the session by sending a \emph{subscribe-request} message, which contains a list of sensors to which the client wants to subscribe.
+The server will then initially respond with a \emph{subscribe-response} message with an empty payload.
+The client completes the three-way handshake using an \emph{subscribe-ack} message, which initiates the session.
+The server immediately sends the initial \emph{subscribe-update} message containing the new subscription state, and starts sending \texttt{publish} messages if appropriate.
+
+A normal sequence of message sent when a client subscribes to some sensors is shown in Figure \ref{fig:sub_normal}.
+The same sequence with lost packets is shown in Figure \ref{fig:sub_lost}.
 
 \begin{figure}[htb]
 	\centering
@@ -188,19 +190,16 @@ is shown in Figure \ref{fig:sub_lost}.
     \label{fig:sub_lost}
 \end{figure}
 
-\newpage
+The client may update its subscription set at any point by sending a new \emph{subscribe-request} message with a new sensor list, which may contain any arbitrary subset or superset of the previous subscription sensor set, including an empty set to unsubscribe from all sensors.
+The server will acknowledge the updated subscription by sending a new \emph{subscribe-response} message with the new subscription state.
 
-When the available sensors change, the server will send a new list of sensors
-to the clients with the \emph{subscribe-update} message. The client will
-acknowledge the reception by sending the \emph{subscribe-ack} message. If the
-client now wants to change its subscription, it may send a new 
-\emph{subscribe-request} message with a new sensor list, which may contain any arbitrary subset or superset of the previous subscription sensor set, including an empty set to unsubscribe from all sensors.
+When the available sensors change, the server will send a new list of subscribed sensors to the clients with the \emph{subscribe-update} message.
+The client will acknowledge the reception by sending the \emph{subscribe-ack} message.
 
-A client terminates the connection by sending the \emph{teardown} message to the
-server. It expects a response from the server and continues sending the same
-message until a response is received. The server responds by sending a
-\emph{teardown-ack} message and may release its resources
-related to the client. If the server receives a \emph{teardown} from a client that has no resources currently allocated for it, the server only responds with the \emph{teardown-ack}
+A client terminates the connection by sending the \emph{teardown} message to the server.
+It expects a response from the server and will retransmit the teardown until a response is received.
+The server acknowledges the reception of the the message by sending a sending a\emph{teardown-ack} message and immediately releasing any resources allocated to the client session.
+If the server receives a \emph{teardown} from a client that has no resources currently allocated for it, the server must respond with a matching \emph{teardown-ack}.
 
 \subsection{Publish}
 Whenever a new sensor value is received at the server it will be sent to the 

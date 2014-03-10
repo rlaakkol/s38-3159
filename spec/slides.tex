@@ -35,9 +35,10 @@
 \begin{frame}{Fragmentation}
 \begin{itemize}
 \item IP takes care of fragmentation and reassembly :)
-\item Packet loss more probable for large packets
+\item Packet loss is more probable for large packets
 \begin{itemize}
-\item Problems may arise with large sensor lists in subscribe $\rightarrow$ Enable gzip
+\item Problems may arise with large sensor lists in subscribe $\rightarrow$ 
+enable gzip compression
 \end{itemize}
 \end{itemize}
 \end{frame}
@@ -49,19 +50,37 @@
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Aggregation: Example}
+\begin{frame}[fragile]{Aggregation: Example}
+\footnotesize
+\begin{verbatim}
+S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp:1': -9.7, 'ts': 1394197037.09 }
+            { 'temp:1': -9.8, 'ts': 1394197039.55 }
+            { 'temp:1': -9.9, 'ts': 1394197041.72 }
+            { 'temp:1': -9.10, 'ts': 1394197043.17 }
+            { 'temp:1': -9.11, 'ts': 1394197045.27 }
+        ] }
+\end{verbatim}
 \end{frame}
 
-\begin{frame}{Security}
+\begin{frame}{Security considerations}
 \begin{itemize}
-  \item Subscribe-query and subscribe-response provide a means for DDoSing. 
-  $\rightarrow$ WINRARZ!
+  \item Subscribe-query and subscribe-response provide a means for DDoSing
+  \begin{itemize}
+    \item Emulate a three-way TCP handshake to prevent DDoSing
+  \end{itemize}
+  \item Improper parameters to aggregation function parameters may cause
+  resource drain on the server
+  \item Implement authentication to prevent spoofed servers and sending fake
+  sensor values
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Header format}
 \begin{itemize}
-\item Bumped magic
+\item Bumped magic (\texttt{0x43})
 \item Noack-bit to type field instead of separate ackthis
 \item Added compression bit (also in type field)
 \end{itemize}

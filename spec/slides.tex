@@ -111,14 +111,17 @@ S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
 \begin{frame}{Fragmentation}
 \begin{itemize}
 	\item IP fragmentation and reassembly of large UDP datagrams
-	\item 	Packet loss probability increases $\sim$ exponentially with size \\
-			$P_{loss} = 1 - (1 - P_{loss_i})^{size / MTU}$
+	\item 	Packet loss probability increases $\sim$ exponentially with size
+	\begin{itemize}
+		\item $P_{loss} = 1 - (1 - P_{loss_i})^{size / MTU}$
+		\item $P_{loss} = 35\%$ for $ P_{loss_i} = 1\% $, $MTU = 1500$ , $size = 64k$	
+	\end{itemize}
 	\item Problematic for subscription messages
 	\begin{itemize}
 		\item All messages include the complete subscription set
+		\item Workaround: payload compression
+		\item Potential solution: implement multiple subscription "channels" using 16-bit reserved header field.
 	\end{itemize}
-	\item Workaround: payload compression
-	\item Potential solution: implement multiple subscription "channels" using 16-bit reserved header field.
 \end{itemize}
 \end{frame}
 

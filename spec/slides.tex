@@ -32,21 +32,32 @@
 \titlepage
 \end{frame}
 
-\begin{frame}{Fragmentation}
+\begin{frame}{Header format}
 \begin{itemize}
-\item IP takes care of fragmentation and reassembly :)
-\item Packet loss is more probable for large packets
-\begin{itemize}
-\item Problems may arise with large sensor lists in subscribe $\rightarrow$ 
-enable gzip compression
+	\item Header format remains compatible, but changes to payload
+	\item Bumped magic (\texttt{0x43})
+	\item Replace AckThis-flag with a NoAck-flag in the type field
+	\item Added a new Compression-flag (also in type field)
+	\item New flags are compatible with old header layout
 \end{itemize}
+\end{frame}
+
+\begin{frame}{Ambient Sound Detector}
+\begin{itemize}
+	\item Continuous stream of medium-sized packets
+	\item ASD packets are smaller than Camera packets!
+	\item Existing implementation handles these
+	\item Performance of packets/s limiting factor?
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Aggregation}
 \begin{itemize}
-\item Sensor type specific listing of available aggregation methods in subscribe-queryresponse
-\item Subscribe message includes method name and one or more parameters, at least \emph{interval}
+%	\item TODO: Sensor type specific listing of available aggregation methods in subscribe-queryresponse
+	\item Altered \emph{PUBLISH} message payload syntax
+	\item Extended \emph{SUBSCRIBE} message payload syntax
+	\item Subscribe message can include an "aggregation expression" for each subscribed sensor name.
+	\item Aggregation expression includes aggregation method and parameters, at least \emph{interval}
 \end{itemize}
 \end{frame}
 
@@ -65,6 +76,17 @@ S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
 \end{verbatim}
 \end{frame}
 
+\begin{frame}{Fragmentation}
+\begin{itemize}
+	\item IP-layer fragmentation and reassembly of large UDP datagrams
+	\item 	Packet loss probability increases $\sim$ exponentially with packet size \\
+			$P_{loss} = 1 - ((1 - P_{loss_i})^{size / MTU})$
+	\item Problematic for subscription messages include complete sensor set
+	\item Workaround: payload compression
+	\item Solution: implement multiple subscription "channels" using 16-bit reserved header field.
+\end{itemize}
+\end{frame}
+
 \begin{frame}{Security considerations}
 \begin{itemize}
   \item Subscribe-query and subscribe-response provide a means for DDoSing
@@ -75,20 +97,17 @@ S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
   resource drain on the server
   \item Implement authentication to prevent spoofed servers and sending fake
   sensor values
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Header format}
-\begin{itemize}
-\item Bumped magic (\texttt{0x43})
-\item Noack-bit to type field instead of separate ackthis
-\item Added compression bit (also in type field)
+  \item \emph{subscribe-query} remains DoS-able for reflection/amplification purposes
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Conclusion}
 \begin{itemize}
-\item Foobarz
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
 \end{itemize}
 \end{frame}
 

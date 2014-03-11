@@ -60,13 +60,35 @@
 \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{New \emph{publish} payload format}
+\begin{itemize}
+	\item Altered \emph{PUBLISH} message payload syntax
+	\item Introduce semantics for sensor data values
+\end{itemize}
+\footnotesize
+\begin{verbatim}
+{ 'device:1': { 'device': true, 'seq_no': 36, 'ts': 1394197045.27 } }
+{ 'device:1': { 'device': false, 'seq_no': 36, 'ts': 1394197049.44 } }
+{ 'gps:1': { 'gps': [ 60.182792, 24.796085 ], 'seq_no': 4, 'ts': 1394200030.25 } }
+{ 'camera:1': { 'camera': false, 'seq_no': 52, 'ts': 1394200084.55 } }
+{ 'camera:1': { 'camera': '...', 'seq_no': 51, 'ts': 1394200084.48 } }
+{ 'asd:1': { 'sound': '...', 'seq_no': 280, 'ts': 1394200191.92} }
+\end{verbatim}
+\end{frame}
+
 \begin{frame}{Aggregation}
 \begin{itemize}
 %	\item TODO: Sensor type specific listing of available aggregation methods in subscribe-queryresponse
-	\item Altered \emph{PUBLISH} message payload syntax
 	\item Extended \emph{SUBSCRIBE} message payload syntax
 	\item Subscribe message can include an "aggregation expression" for each subscribed sensor name.
-	\item Aggregation expression includes aggregation method and parameters, at least \emph{interval}
+	\item Aggregation expression includes aggregation method and parameters:
+	\begin{description}
+		\item[aggregation]: \texttt{avg}, \texttt{min}, \texttt{max}
+		\item[interval]: seconds
+		\item[step]: seconds
+		\item[under]: ...
+		\item[over]: ...
+	\end{description}
 \end{itemize}
 \end{frame}
 

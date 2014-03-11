@@ -81,10 +81,10 @@
 \begin{itemize}
 %	\item TODO: Sensor type specific listing of available aggregation methods in subscribe-queryresponse
 	\item Extended \emph{SUBSCRIBE} message payload syntax
-	\item Subscribe message can include an "aggregation expression" for each subscribed sensor name.
+	\item Subscribe message may be a dict of "aggregation expressions" for each subscribed sensor name.
 	\item Aggregation expression includes aggregation method and parameters:
 	\begin{description}
-		\item[aggregation]: \texttt{avg}, \texttt{min}, \texttt{max}
+		\item[aggregate]: \texttt{avg}, \texttt{min}, \texttt{max}
 		\item[interval]: seconds
 		\item[step]: seconds
 		\item[under]: ...

@@ -40,6 +40,15 @@
 	\item Added a new Compression-flag (also in type field)
 	\item New flags are compatible with old header layout
 \end{itemize}
+
+\begin{figure}
+    \begin{center}
+        {\tiny \verbatiminput{headerfmt.txt}}
+        \caption{Message format}
+        \label{fig:header}
+    \end{center}
+\end{figure}
+
 \end{frame}
 
 \begin{frame}{Ambient Sound Detector}
@@ -78,30 +87,39 @@ S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
 
 \begin{frame}{Fragmentation}
 \begin{itemize}
-	\item IP-layer fragmentation and reassembly of large UDP datagrams
-	\item 	Packet loss probability increases $\sim$ exponentially with packet size \\
-			$P_{loss} = 1 - ((1 - P_{loss_i})^{size / MTU})$
-	\item Problematic for subscription messages include complete sensor set
+	\item IP fragmentation and reassembly of large UDP datagrams
+	\item 	Packet loss probability increases $\sim$ exponentially with size \\
+			$P_{loss} = 1 - (1 - P_{loss_i})^{size / MTU}$
+	\item Problematic for subscription messages
+	\begin{itemize}
+		\item All messages include the complete subscription set
+	\end{itemize}
 	\item Workaround: payload compression
-	\item Solution: implement multiple subscription "channels" using 16-bit reserved header field.
+	\item Potential solution: implement multiple subscription "channels" using 16-bit reserved header field.
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Security considerations}
 \begin{itemize}
-  \item Subscribe-query and subscribe-response provide a means for DDoSing
-  \begin{itemize}
-    \item Emulate a three-way TCP handshake to prevent DDoSing
-  \end{itemize}
-  \item Improper parameters to aggregation function parameters may cause
-  resource drain on the server
-  \item Implement authentication to prevent spoofed servers and sending fake
-  sensor values
-  \item \emph{subscribe-query} remains DoS-able for reflection/amplification purposes
+	\item Primarily DoS reflection/amplification considerations
+	\begin{itemize}
+  		\item v1 \emph{subscribe-request} is trivially DoS'able to produce a continuous stream of \emph{publish}
+  		\item Solution: Implement a three-way handshake for subscribing.
+	\end{itemize}
+  	\item Malicious aggregation function parameters may DoS server
+  	\begin{itemize}
+  		\item Very small interval
+  		\item Very large step
+  	\end{itemize}
+  	\item TODO: Authentication/encryption to protect server identity and sign publishes?
+  	\item \emph{subscribe-query} remains DoS-able for reflection/amplification purposes
+  	\begin{itemize}
+  		\item Potential workaround: Query padding $\backslash o /$ {\tiny trolling the internetz}
+  	\end{itemize}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Conclusion}
+\begin{frame}{Questions?}
 \begin{itemize}
 \item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
 \item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF

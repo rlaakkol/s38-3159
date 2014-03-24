@@ -69,31 +69,64 @@
 \begin{frame}{IEEE 802.15.4 Link Layer}
   \begin{itemize}
     % CSMA, beacons.
-    \item Full-function vs Reduced-function devices.
+    \item Full-function vs Reduced-function devices
 	\begin{itemize}
-  		\item Battery-powered devices wake up from sleep to transmit.
-  		\item Less power-constrained devices can receive continuously.
+  		\item Battery-powered devices wake up from sleep to transmit
+  		\item Less power-constrained devices can receive continuously
 	\end{itemize}
 	
   	%\item Addressing (?)
   	%\item Frame validation, time slot guarantees, node assocations.
   	\item Devices form assocations and may relay data
-  	\begin{itemize}
-  		\item Star, Tree, Mesh
-  	\end{itemize}
+  	\item Coordinator nodes
   \end{itemize}
 \end{frame}
 
 \begin{frame}{ZigBee Network Layer}
   \begin{itemize}
-  	\item Tree, Mesh, ...
-  	\item AODV routing...
+  	\item Support for various network structures
+  	\begin{itemize}
+  		\item Star, Tree, Mesh
+  	\end{itemize}
+  	\item AODV routing (broadcast request -> unicast response)
+  	\item Device types
+  	\begin{itemize}
+  		\item ZigBee Coordinator
+  		\item ZigBee Router
+  		\item ZigBee End Device
+  	\end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}{ZigBee Application Layer}
   \begin{itemize}
-  	\item Profiles...
+  	\item ZigBee Device Object
+  	\begin{itemize}
+  		\item Discovery
+  		\item Service addressing
+  		\item Security
+  		\item Configuration (?)
+  	\end{itemize}
+  	\item Application profiles
+  	\begin{itemize}
+  		\item Define application-specific protocols 
+  	\end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ZigBee Application Profiles}
+  \begin{itemize}
+  	\item ZigBee Home Automation
+    \item ZigBee Smart Energy
+    \item ZigBee Telecommunication Services
+    \item ZigBee Health Care
+    \item ZigBee RF4CE – Remote Control
+    \item ZigBee RF4CE – Input Device
+    \item ZigBee Light Link
+    \item ZigBee IP
+    \item ZigBee Building Automation
+    \item ZigBee Gateway
+    \item ZigBee Green Power
   \end{itemize}
 \end{frame}
 

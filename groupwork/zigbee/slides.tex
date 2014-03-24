@@ -47,9 +47,7 @@
 \begin{frame}{IEEE 802.15.4 LR-WPAN}
   \begin{itemize}
   	\item Low-Rate Wireless Personal Access Networks
-	\item Physical and Link layers
-  	\item Optimized for cheap, low-power hardware
-  	\item Provides low-bandwidth transmissions
+	\item Defines Physical and Link layers
   	
     % ZigBee ISA100.11a WirelessHART.
   \end{itemize}
@@ -57,23 +55,39 @@
 
 \begin{frame}{IEEE 802.15.4 Physical Layer}
   \begin{itemize}
-  	\item 868/915 MHz @ 20kbps and 2.4 GHz @ 250kbps
-    %\item DSSS, UWB and CSS modulations
-    \item Wakeup from sleep in 30ms (ZigBee)
+  	\item Provides low-bandwidth transmissions
+  	\begin{itemize}
+  		\item 868/915 MHz @ 20kbps and 2.4 GHz @ 250kbps
+  	\end{itemize}
+  	\item Optimized for cheap, low-power hardware
+  	\begin{itemize}
+    	\item Wakeup from sleep in 30ms (ZigBee)
+  	\end{itemize}
   \end{itemize}
 \end{frame}
     
 \begin{frame}{IEEE 802.15.4 Link Layer}
   \begin{itemize}
-  	\item Addressing (?)
-  	\item CSMA, beacons.
-  	\item Frame validation, time slot guarantees, node assocations.
+    % CSMA, beacons.
+    \item Full-function vs Reduced-function devices.
+	\begin{itemize}
+  		\item Battery-powered devices wake up from sleep to transmit.
+  		\item Less power-constrained devices can receive continuously.
+	\end{itemize}
+	
+  	%\item Addressing (?)
+  	%\item Frame validation, time slot guarantees, node assocations.
+  	\item Devices form assocations and may relay data
+  	\begin{itemize}
+  		\item Star, Tree, Mesh
+  	\end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}{ZigBee Network Layer}
   \begin{itemize}
   	\item Tree, Mesh, ...
+  	\item AODV routing...
   \end{itemize}
 \end{frame}
 

@@ -38,37 +38,48 @@
 %\end{frame}
 
 \begin{frame}{Introduction}
-	\begin{itemize}
-    \item 
- 	\end{itemize}
-\end{frame}
-
-\begin{frame}{IEEE 802.15.4}
   \begin{itemize}
-    \item A standard specifying lower layers of a network stack for low-rate
-    wireless personal access networks (LR-WPANs).
-    \item Defines physica layer and media access control while upper layers
-    are to be specified by other procols.
-    \item Is a basis for several other protocols, such as, ZigBee, ISA100.11a
-    and WirelessHART.
-    \item Intended for low cost, low speed and low power consumption applications.
-    \item Conceives a 250 kbit/s transfer rate at 10 m.
+    \item ZigBee specifies high-level communication protocols over IEEE 802.15 LR-WPAN.
+    \item Used for e.g. home automation, sensor networks?
   \end{itemize}
 \end{frame}
 
-\begin{frame}{IEEE 802.15.4 architecture}
+\begin{frame}{IEEE 802.15.4 LR-WPAN}
   \begin{itemize}
-    \item Physical layer
-    \begin{itemize}
-      \item Three frequency bands for European, United States and worldwide use.
-      \item Originally only DSSS modulation, now also UWB and CSS amongst others.
-    \end{itemize}
-  \item Link layer
-    \begin{itemize}
-      \item In addition to data transfer services also offers a management
-      interface and network beaconing.
-      \item Performs frame validation, time slot guaranteeing and node association.
-    \end{itemize}
+  	\item Low-Rate Wireless Personal Access Networks
+	\item Physical and Link layers
+  	\item Optimized for cheap, low-power hardware
+  	\item Provides low-bandwidth transmissions
+  	
+    % ZigBee ISA100.11a WirelessHART.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{IEEE 802.15.4 Physical Layer}
+  \begin{itemize}
+  	\item 868/915 MHz @ 20kbps and 2.4 GHz @ 250kbps
+    %\item DSSS, UWB and CSS modulations
+    \item Wakeup from sleep in 30ms (ZigBee)
+  \end{itemize}
+\end{frame}
+    
+\begin{frame}{IEEE 802.15.4 Link Layer}
+  \begin{itemize}
+  	\item Addressing (?)
+  	\item CSMA, beacons.
+  	\item Frame validation, time slot guarantees, node assocations.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ZigBee Network Layer}
+  \begin{itemize}
+  	\item Tree, Mesh, ...
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ZigBee Application Layer}
+  \begin{itemize}
+  	\item Profiles...
   \end{itemize}
 \end{frame}
 

@@ -74,12 +74,16 @@
 	\begin{itemize}
   		\item Battery-powered devices wake up from sleep to transmit
   		\item Less power-constrained devices can receive continuously
+  		\item Coordinated beacon intervals -> timed wakeup for receive
 	\end{itemize}
 	
   	%\item Addressing (?)
   	%\item Frame validation, time slot guarantees, node assocations.
-  	\item Devices form assocations and may relay data
-  	\item Coordinator nodes
+  	\item Devices form point-to-point assocations
+  	\begin{itemize}
+  		\item Coordinator nodes
+  		\item Relaying frames
+  	\end{itemize}
   \end{itemize}
 \end{frame}
 
@@ -135,27 +139,6 @@
     \item ZigBee Building Automation
     \item ZigBee Gateway
     \item ZigBee Green Power
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{IEEE 802.15.4 architecture (continued)}
-  \begin{itemize}
-    \item Node types  
-      \begin{itemize}
-      \item Fully-functioning device (FFD) may act as a coordinator in addition
-      to being a common node. 
-      \item Reduced-function devices (RFD) are simple and may only communicate
-      with FFDs.
-    \end{itemize}
-    \item Network topologies: peer-to-peer and star.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{IEEE 802.15.4 Data Transport}
-  \begin{itemize}
-    \item Basic data transport unit is a frame having four types: data, 
-    acknowledgement, beacon and MAC command.
-    \item Contention resolved by CSMA/CA.
   \end{itemize}
 \end{frame}
 

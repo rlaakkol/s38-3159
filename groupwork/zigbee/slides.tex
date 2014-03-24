@@ -19,6 +19,7 @@
 \usepackage{graphicx}
 \usepackage[ELEC]{aaltologo}
 %\usepackage{animate}
+\usepackage{hyperref}
 
 \title[ZigBee]{Alternative Network Architectures: ZigBee}
 \author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
@@ -121,7 +122,7 @@
 \begin{frame}{ZigBee Network Layer}
   \begin{figure}
   \includegraphics[width=\textwidth]{zbnetstructure.png}
-  \caption{ZigBee network structure. Controllers and routers act as IEEE 802.15.4 FFDs and end devices as RFDs.}
+  \caption{ZigBee network structure. Controllers and routers act as IEEE 802.15.4 FFDs and end devices as RFDs. Source \cite{zbslides}}
   \end{figure}
 \end{frame}
 
@@ -161,6 +162,13 @@
   \begin{itemize}
 	\item $\sigma^2 = 0.3$
   \end{itemize}
+\end{frame}
+
+\begin{frame}{References}
+\begin{thebibliography}{9}
+\bibitem{zbslides}
+\url{https://docs.zigbee.org/zigbee-docs/dcn/06/docs-06-4513-00-00mg-zigbee-network-layer-technical-overview.pdf}
+\end{thebibliography}
 \end{frame}
 
 \end{document}

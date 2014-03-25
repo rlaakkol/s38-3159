@@ -59,6 +59,7 @@ class Logger :
         """
 
         self.logfile.write(str('\t'.join(str(field) for field in fields)) + '\n')
+        self.logfile.flush()
 
     def close (self) :
         """

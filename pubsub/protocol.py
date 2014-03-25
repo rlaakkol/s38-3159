@@ -51,7 +51,7 @@ class Message (object):
         return Message.type_name(self.type)
 
     def __str__ (self):
-        return "{self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
+        return "({self.magic:x}){self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
     
 class Transport (pubsub.udp.Socket):
     """
@@ -113,13 +113,29 @@ class Transport (pubsub.udp.Socket):
         """
 
         # header
-        magic = msg.magic if msg.magic else self.MAGIC
-        pack_type = (msg.type & 0x0F
-                |  (1 if msg.noack else 0) << 7
-                |  (1 if msg.compress else 0) << 6
-        )
+        magic = msg.magic
 
-        header = self.HEADER.pack(magic, pack_type, 0, msg.ackseq, msg.seq)
+        if not magic :
+            magic = self.MAGIC
+
+        if magic == self.MAGIC_V2:
+            pack_type = (msg.type & 0x0F
+                    |  (1 if msg.noack else 0) << 7
+                    |  (1 if msg.compress else 0) << 6
+            )
+            unused = 0
+            compress = msg.compress
+
+        elif magic == self.MAGIC_V1:
+            pack_type = (msg.type & 0x0F)
+            unused = (0
+                    |   (1 if not msg.noack else 0) << 15
+            )
+            compress = False
+        else :
+            raise Error("Invalid magic: {magic:x}".format(magic=magic))
+
+        header = self.HEADER.pack(magic, pack_type, unused, msg.ackseq, msg.seq)
 
         # payload
         if msg.payload is None:
@@ -127,7 +143,7 @@ class Transport (pubsub.udp.Socket):
         else:
             payload = pubsub.jsonish.build_bytes(msg.payload)
 
-        if msg.compress :
+        if compress :
             payload = zlib.compress(payload)
         
         return header + payload

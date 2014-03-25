@@ -4,11 +4,15 @@ import pubsub.udp
 
 import logging; log = logging.getLogger('pubsub.protocol')
 import struct
+import zlib
 
-class Error (Exception) :
+class Error (Exception):
     pass
 
-class Message (object) :
+class Message (object):
+    NOACK       = 0x80
+    COMPRESS    = 0x40
+
     SUBSCRIBE   = 0x00
     PUBLISH     = 0x01
     TEARDOWN    = 0x02
@@ -20,12 +24,21 @@ class Message (object) :
     }
 
     @classmethod
-    def type_name (cls, type) :
+    def type_name (cls, type):
         return cls.TYPE_NAMES.get(type, '?')
 
-    def __init__ (self, type, flags=0, ackseq=0, seq=0, payload=None, addr=None) :
+    def __init__ (self, type, magic=0, noack=0, compress=0, ackseq=0, seq=0, payload=None, addr=None):
+        """
+            magic       - override default MAGIC for sent message
+            noack       - indicate to receiver that we are not expecting any ackseq for our seq
+            compress    - compress() payload before sending, indicate to receiver to decompress
+            ...
+        """
+
+        self.magic = magic
+        self.noack = noack
+        self.compress = compress
         self.type = type
-        self.flags = flags
         self.ackseq = ackseq
         self.seq = seq
         self.payload = payload
@@ -34,61 +47,121 @@ class Message (object) :
         self.addr = addr
 
     @property
-    def type_str (self) :
+    def type_str (self):
         return Message.type_name(self.type)
 
-    def __str__ (self) :
-        return "{self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
+    def __str__ (self):
+        return "({self.magic:x}){self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
     
-class Transport (pubsub.udp.Socket) :
+class Transport (pubsub.udp.Socket):
     """
         Bidirectional UDP-based transport protocol.
     """
     
-    MAGIC = 0x42
+    MAGIC_V1 = 0x42
+    MAGIC_V2 = 0x43
+
+    MAGIC = MAGIC_V2
     HEADER = struct.Struct("! BBH I I")
-    
+
     # support maximum-size UDP messages
     SIZE = 2**16
 
-    def parse (self, buf, **opts) :
-        # header
-        magic, type, flags, ackseq, seq = self.HEADER.unpack(buf[:self.HEADER.size])
+    def parse (self, buf, **opts):
+        """
+            Unpack str -> Message
+        """
 
-        if magic != self.MAGIC :
+        # header
+        magic, unpack_type, flags, ackseq, seq = self.HEADER.unpack(buf[:self.HEADER.size])
+
+        if magic == self.MAGIC_V2:
+            noack = bool(unpack_type & 0x80)
+            compress = bool(unpack_type & 0x40)
+            type = unpack_type & 0x0F
+
+        elif magic == self.MAGIC_V1:
+            type = unpack_type
+            noack = not bool(flags & 0x8000) # XXX: not really
+            compress = False
+
+        else:
             raise Error("Invalid magic: {magic:x}".format(magic=magic))
 
         # payload
-        payload = pubsub.jsonish.parse_bytes(buf[self.HEADER.size:])
- 
-        return Message(type, flags, ackseq, seq, payload, **opts)
+        payload = buf[self.HEADER.size:]
 
-    def build (self, msg) :
+        if compress :
+            # XXX: place some limits on maximum decompressed size
+            payload = zlib.decompress(payload)
+
+        payload = pubsub.jsonish.parse_bytes(payload)
+ 
+        return Message(type,
+                magic       = magic, 
+                noack       = noack, 
+                compress    = compress,
+                ackseq      = ackseq,
+                seq         = seq,
+                payload     = payload, 
+                **opts
+        )
+
+    def build (self, msg):
+        """
+            Pack Message -> str
+        """
+
         # header
-        header = self.HEADER.pack(self.MAGIC, msg.type, msg.flags, msg.ackseq, msg.seq)
+        magic = msg.magic
+
+        if not magic :
+            magic = self.MAGIC
+
+        if magic == self.MAGIC_V2:
+            pack_type = (msg.type & 0x0F
+                    |  (1 if msg.noack else 0) << 7
+                    |  (1 if msg.compress else 0) << 6
+            )
+            unused = 0
+            compress = msg.compress
+
+        elif magic == self.MAGIC_V1:
+            pack_type = (msg.type & 0x0F)
+            unused = (0
+                    |   (1 if not msg.noack else 0) << 15
+            )
+            compress = False
+        else :
+            raise Error("Invalid magic: {magic:x}".format(magic=magic))
+
+        header = self.HEADER.pack(magic, pack_type, unused, msg.ackseq, msg.seq)
 
         # payload
-        if msg.payload is None :
+        if msg.payload is None:
             payload = b''
-        else :
+        else:
             payload = pubsub.jsonish.build_bytes(msg.payload)
+
+        if compress :
+            payload = zlib.compress(payload)
         
         return header + payload
 
-    def __iter__ (self) :
+    def __iter__ (self):
         """
             Yield parsed Messages received from clients.
         """
 
-        for buf, addr in super(Transport, self).__iter__() :
-            try :
+        for buf, addr in super(Transport, self).__iter__():
+            try:
                 msg = self.parse(buf, addr=addr)
 
-            except Error as error :
+            except Error as error:
                 log.error("%s: invalid message: %s", addr, error)
                 continue
 
-            except pubsub.jsonish.ParseError as error :
+            except pubsub.jsonish.ParseError as error:
                 log.error("%s: invalid payload: %s", addr, error)
                 continue
 
@@ -96,7 +169,7 @@ class Transport (pubsub.udp.Socket) :
 
             yield msg
 
-    def __call__ (self, msg, addr=None) :
+    def __call__ (self, msg, addr=None):
         """
             Send a Message.
         """

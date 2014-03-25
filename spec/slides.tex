@@ -12,98 +12,152 @@
   \usefonttheme{default}  % or try serif, structurebold, ...
   \setbeamertemplate{navigation symbols}{}
   \setbeamertemplate{caption}[numbered]
-} 
+  } 
 
-\usepackage[english]{babel}
-\usepackage[utf8]{inputenc}
-\usepackage[ELEC]{aaltologo}
-\usepackage{verbatim}
+  \usepackage[english]{babel}
+  \usepackage[utf8]{inputenc}
+  \usepackage[ELEC]{aaltologo}
+  \usepackage{verbatim}
 
 
-\title[SFO protocol]{Sensor Fusion and Optimization: Protocol Specification}
-\author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
-\institute{Aalto ELEC}
-\date{4.2.2014}
+  \title[SFO protocol]{aNSA is Not a Sensor Aggregator\\Protocol Specification Phase 2 Changes}
+  \author{Riku Lääkkölä \and Tero Marttila \and Tero Paloheimo}
+  \institute{Aalto ELEC}
+  \date{11.3.2014}
 %\logo{\AaltoLogoRandomSmall{0.3}}
 
 \begin{document}
 
 \begin{frame}
-  \titlepage
+\titlepage
 \end{frame}
 
-\begin{frame}{Introduction}
+\begin{frame}{Header format}
 \begin{itemize}
-	\item Unreliable ordered delivery
-    \item Idempotent state updates
+	\item Header format remains compatible, but changes to payload
+	\item Bumped magic (\texttt{0x43})
+	\item Replace AckThis-flag with a NoAck-flag in the type field
+	\item Added a new Compression-flag (also in type field)
+	\item New flags are compatible with old header layout
+\end{itemize}
+
+\begin{figure}
+    \begin{center}
+        {\tiny \verbatiminput{headerfmt.txt}}
+        \caption{Message format}
+        \label{fig:header}
+    \end{center}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}{Ambient Sound Detector}
+\begin{itemize}
+	\item Continuous stream of medium-sized packets
+	\item ASD packets are smaller than Camera packets!
+	\item Existing implementation handles these
+	\item Performance of packets/s limiting factor?
+	\item Still no provision for reliable transport with retransmits
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Encoding}
+\begin{frame}[fragile]{New \emph{publish} payload format}
 \begin{itemize}
-	\item Fixed-length binary header
-    \item Variable-length JSON payload
+	\item Altered \emph{PUBLISH} message payload syntax
+	\item Introduce semantics for sensor data values
+\end{itemize}
+\scriptsize
+\begin{verbatim}
+{ 'device:1': { 'device': true, 'seq_no': 36, 'ts': 1394197045.27 } }
+{ 'device:1': { 'device': false, 'seq_no': 36, 'ts': 1394197049.44 } }
+{ 'gps:1': { 'gps': [ 60.182792, 24.796085 ], 'seq_no': 4, 'ts': 1394200030.25 } }
+{ 'camera:1': { 'camera': false, 'seq_no': 52, 'ts': 1394200084.55 } }
+{ 'camera:1': { 'camera': '...', 'seq_no': 51, 'ts': 1394200084.48 } }
+{ 'asd:1': { 'sound': '...', 'seq_no': 280, 'ts': 1394200191.92} }
+\end{verbatim}
+\end{frame}
+
+\begin{frame}{Aggregation}
+\begin{itemize}
+%	\item TODO: Sensor type specific listing of available aggregation methods in subscribe-queryresponse
+	\item Extended \emph{SUBSCRIBE} message payload syntax
+	\item Subscribe message may be a dict of "aggregation expressions" for each subscribed sensor name.
+	\item Aggregation expression includes aggregation method and parameters:
+	\begin{description}
+		\item[aggregate]: \texttt{avg}, \texttt{min}, \texttt{max}
+		\item[interval]: seconds
+		\item[step]: seconds
+		\item[under]: ...
+		\item[over]: ...
+	\end{description}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Header}
-\begin{figure}
-	\centering
-	{\scriptsize\verbatiminput{headerfmt.txt}}
-	\caption{Message format}
-	\label{fig:header}
-\end{figure}
+\begin{frame}[fragile]{Aggregation: Example}
+\scriptsize
+\begin{verbatim}
+S       { 'temp:1': { 'aggregate': 'last', 'interval': 10, 'step': 2 } }
+    S   { 'temp:1': 1 }
+    P   { 'temp:1': [
+            { 'temp:1': -9.7, 'ts': 1394197037.09 }
+            { 'temp:1': -9.8, 'ts': 1394197039.55 }
+            { 'temp:1': -9.9, 'ts': 1394197041.72 }
+            { 'temp:1': -9.10, 'ts': 1394197043.17 }
+            { 'temp:1': -9.11, 'ts': 1394197045.27 }
+        ] }
+        
+S       { 'gps:1': { 'over': [ -13.337, -13.337 ], 'under': [ 13.3337, 13.3337 ], 'interval': 30 } }
+    S   { 'gps:1': 1 }
+    P   { 'gps:1': [
+            { 'gps': [ 13.336, -13.336 ], 'ts': 1394197045.27 }
+        ] }
+\end{verbatim}
 \end{frame}
 
-\begin{frame}{Messages}
-\begin{table}
-	\centering
-	\caption{Message variants}
-    {\scriptsize\input{messages.tex}}
-	\label{tbl:messages}
-\end{table}
-\end{frame}
-
-\begin{frame}{Subscribe}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/subscribe_normal.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Subscribe with packet loss}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/subscribe_lost.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Publish}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/publish_normal.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Teardown}
-\begin{figure}
-	\includegraphics[width=\textwidth]{figures/teardown.pdf}
-\end{figure}
-\end{frame}
-
-\begin{frame}{Limitations}
+\begin{frame}{Fragmentation}
 \begin{itemize}
-	\item Subscription message size grows linearly with sensor count
-    \item No provision for retransmitting lost camera data
-    \begin{itemize}
-    	\item That wouldn't be real-time enough! :)
-    \end{itemize}
+	\item IP fragmentation and reassembly of large UDP datagrams
+	\item 	Packet loss probability increases $\sim$ exponentially with size
+	\begin{itemize}
+		\item $P_{loss} = 1 - (1 - P_{loss_i})^{size / MTU}$
+		\item $P_{loss} = 35\%$ for $ P_{loss_i} = 1\% $, $MTU = 1500$ , $size = 64k$	
+	\end{itemize}
+	\item Problematic for subscription messages
+	\begin{itemize}
+		\item All messages include the complete subscription set
+		\item Workaround: payload compression
+		\item Potential solution: implement multiple subscription "channels" using 16-bit reserved header field.
+	\end{itemize}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Conclusion}
+\begin{frame}{Security considerations}
 \begin{itemize}
-	\item Optimize subscribe for reliability
-    \item Keepalive timeouts for detecting dropped clients
-    \item Handle dropped \textbf{teardown-ack}s
-    \item Consider server restarts
+	\item Primarily DoS reflection/amplification considerations
+	\begin{itemize}
+  		\item v1 \emph{subscribe-request} is trivially DoS'able to produce a continuous stream of \emph{publish}
+  		\item Solution: Implement a three-way handshake for subscribing.
+	\end{itemize}
+  	\item Malicious aggregation function parameters may DoS server
+  	\begin{itemize}
+  		\item Very small interval
+  		\item Very large step
+  	\end{itemize}
+  	\item TODO: Authentication/encryption to protect server identity and sign publishes?
+  	\item \emph{subscribe-query} remains DoS-able for reflection/amplification purposes
+  	\begin{itemize}
+  		\item Potential workaround: Query padding $\backslash o /$ {\tiny trolling the internetz}
+  	\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Questions?}
+\begin{itemize}
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
+\item ASDFASDFASDFDSAFDSAFDSAFASDFASDFASDFASDF
 \end{itemize}
 \end{frame}
 

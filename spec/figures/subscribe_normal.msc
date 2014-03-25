@@ -7,7 +7,11 @@ msc {
 
  a => b [label="subscribe-query"];
  a <= b [label="subscribe-queryresponse"];
- a => b [label="subscribe-request, seq: 1, payload: ['sensor1', 'sensor5']"];
- a <= b [label="subscribe-response, ackseq: 1, seq:1 payload: {'sensor1': 1, 'sensor2': 0, ...}"];
+ --- [label="Optional stateless query handshake"];
+ a => b [label="subscribe-request seq:1 payload:..."];
+ a <= b [label="subscribe-response ackseq:1 seq:1"];
+ a => b [label="subscribe-ack ackseq:1"];
+ a <= b [label="subscribe-update seq:2 payload:..."];
+ a => b [label="subscribe-ack ackseq:2"];
  --- [label="Ready to start publishing"];
 }

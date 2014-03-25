@@ -6,7 +6,7 @@ import logging; log = logging.getLogger('ps-client')
 import pubsub.args
 import pubsub.client
 
-def main (args) :
+def main (args):
     """
         Publish-Subscribe client.
     """
@@ -32,20 +32,20 @@ def main (args) :
     # client
     client = pubsub.client.Client(args.server_ip, args.server_port)
     
-    if args.list :
+    if args.list:
         # query
-        for sensor in client.query() :
+        for sensor in client.query():
             print(sensor)
 
-    if not args.list or args.sensors :
+    if not args.list or args.sensors:
 
-        if args.sensors :
+        if args.sensors:
             sub = client.subscribe(args.sensors)
-        else :
+        else:
             sub = client.subscribe()
 
         # subscribe -> publish
-        for update in sub :
+        for update in sub:
             print(update)
 
 if __name__ == '__main__':

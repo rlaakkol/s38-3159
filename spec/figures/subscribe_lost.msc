@@ -10,10 +10,10 @@ msc {
  --- [label="Client timeout"];
  a => b [label="subscribe-query"];
  a <= b [label="subscribe-queryresponse"];
- a => b [label="subscribe-ŕequest, seq: 1, payload: ['sensor1', 'sensor5']"];
- a x- b [label="subscribe-response, ackseq: 1, seq: 1, payload: {'sensor1': 1, 'sensor2': 0, ...}"];
+ a => b [label="subscribe-ŕequest, seq: 1, payload: ..."];
+ a x- b [label="subscribe-response, ackseq: 1, seq: 1, payload: ..."];
  --- [label="Client timeout"];
- a => b [label="subscribe-ŕequest, seq: 1, payload: ['sensor1', 'sensor5']"];
- a <= b [label="subscribe-response, ackseq: 1, seq: 1 payload: {'sensor1': 1, 'sensor2': 0, ...}"];
+ a => b [label="subscribe-ŕequest, seq: 1, payload: ..."];
+ a <= b [label="subscribe-response, ackseq: 1, seq: 1 payload: ..."];
  --- [label="Ready to start publishing"];
 }

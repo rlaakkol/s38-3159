@@ -13,17 +13,17 @@ import time
 import collections # XXX: protocol
 import logging; log = logging.getLogger('pubsub.server')
 
-class ServerSensor :
+class ServerSensor:
     """
         Server per-sensor state
     """
 
-    def __init__ (self, server, dev_id, logger) :
+    def __init__ (self, server, dev_id, logger):
         self.server = server
         self.dev_id = dev_id
         self.logger = logger
 
-    def recv (self, msg) :
+    def recv (self, msg):
         """
             Process sensor update, updating all clients that may be subsribed.
         """
@@ -40,23 +40,23 @@ class ServerSensor :
         # update clients
         log.info("%s: %s", self, update)
 
-        for client in self.server.sensor_clients(self) :
-            try :
+        for client in self.server.sensor_clients(self):
+            try:
                 client.sensor_update(self, update)
                 self.logger.log('%s\t%s\n' % (str(time.time()), str(update)))
-            except Exception :
+            except Exception as ex:
                 # XXX: drop update...
                 log.exception("ServerClient %s: sensor_update %s:%s", client, self, update)
         
-    def __str__ (self) :
+    def __str__ (self):
         return self.dev_id
 
-class ServerClient :
+class ServerClient:
     """
         Server per-client state.
     """
 
-    def __init__ (self, server, transport, addr) :
+    def __init__ (self, server, transport, addr):
         self.server = server
         self.transport = transport
         self.addr = addr
@@ -66,64 +66,72 @@ class ServerClient :
         self.sendseq = collections.defaultdict(int)
         self.recvseq = collections.defaultdict(int)
 
-    def recv (self, msg) :
+        # detected client magic
+        self.magic = 0
+
+    def recv (self, msg):
         """
             Process a message from the client.
         """
 
+        # track changes
+        if msg.magic != self.magic:
+            log.info("%s: detected client magic %#04x -> %#04x", self, self.magic, msg.magic)
+            self.magic = msg.magic
+
         recvseq = self.recvseq[msg.type]
         
-        if msg.seq < recvseq :
+        if msg.seq < recvseq:
             log.warning("%s: drop duplicate %s:%d < %d", self, msg.type_str, msg.seq, recvseq)
 
-        elif msg.seq == recvseq :
+        elif msg.seq == recvseq:
             log.warning("%s: dupack %s:%d", self, msg.type_str, msg.seq)
 
             self.send(msg.type, ackseq=msg.seq)
 
-        else :
+        else:
             handler = self.RECV[msg.type]
             
-            try :
+            try:
                 # process request
                 payload = handler(self, msg.seq, msg.payload)
 
-            except Exception :
+            except Exception as ex:
                 log.exception("%s: %s", self, msg)
 
-            else :
+            else:
                 # processed state update
                 self.recvseq[msg.type] = msg.seq
                 
-                if payload :
+                if payload:
                     # ack + response
                     seq = self.sendseq[msg.type] + 1
         
                     log.info("%s: %s:%d:%s -> %d:%s", self, msg.type_str, msg.seq, msg.payload, seq, payload)
 
-                    self.send(msg.type, payload, seq=seq, ackseq=msg.seq)
+                    self.send(msg.type, payload, magic=msg.magic, seq=seq, ackseq=msg.seq)
 
                     self.sendseq[msg.type] = seq
-                else :
+                else:
                     # ack
                     log.info("%s: %s:%d:%s -> *", self, msg.type_str, msg.seq, msg.payload)
 
-                    self.send(msg.type, ackseq=msg.seq)
+                    self.send(msg.type, magic=msg.magic, ackseq=msg.seq)
 
-    def recv_subscribe (self, seq, sensors) :
+    def recv_subscribe (self, seq, sensors):
         """
             Process a subscription request from the client, or query if not seq.
         """
         
-        if sensors is True :
+        if sensors is True:
             # subscribe to all sensors
             self.sensors = True
 
-        elif not sensors :
+        elif not sensors:
             # unsubscribe from all sensors
             self.sensors = set()
         
-        else :
+        else:
             # subscribe to given sensors
             self.sensors = set(sensors)
 
@@ -131,14 +139,14 @@ class ServerClient :
             Message.SUBSCRIBE:  recv_subscribe,
     }
 
-    def sensor_update (self, sensor, update) :
+    def sensor_update (self, sensor, update):
         """
             Process sensor update.
         """
 
         self.send_publish(update)
 
-    def send_publish (self, update) :
+    def send_publish (self, update):
         """
             Send a publish message for the given sensor update.
         """
@@ -148,26 +156,29 @@ class ServerClient :
 
         self.send(Message.PUBLISH, update)
 
-    def send (self, type, payload=None, **opts) :
+    def send (self, type, payload=None, magic=None, **opts):
         """
             Build a Message and send it to the client.
         """
 
-        msg = Message(type, payload=payload, **opts)
+        if magic is None :
+            magic = self.magic
+
+        msg = Message(type, payload=payload, magic=magic, **opts)
 
         log.debug("%s: %s", self, msg)
 
         self.transport(msg, addr=self.addr)
 
-    def __str__ (self) :
+    def __str__ (self):
         return pubsub.udp.addrname(self.addr)
 
-class Server (pubsub.udp.Polling) :
+class Server (pubsub.udp.Polling):
     """
         Server state/logic implementation.
     """
 
-    def __init__ (self, publish_port, subscribe_port, sensors, sensor_loggers, sent_logger) :
+    def __init__ (self, publish_port, subscribe_port, sensors, sensor_loggers, sent_logger):
         super(Server, self).__init__()
 
         # { dev_id: ServerSensor }
@@ -189,7 +200,7 @@ class Server (pubsub.udp.Polling) :
         self.client_port = pubsub.protocol.Transport.listen(subscribe_port, nonblocking=True)
         log.info("Listening for client subscribe messages on %s", self.client_port)
         
-    def sensor (self, msg) :
+    def sensor (self, msg):
         """
             Process a publish message from a sensor.
         """
@@ -197,59 +208,59 @@ class Server (pubsub.udp.Polling) :
         sensor_id = msg['dev_id']
 
         # maintain sensor state
-        if sensor_id in self.sensors :
+        if sensor_id in self.sensors:
             sensor = self.sensors[sensor_id]
-        else :
+        else:
             sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id, self.sent_logger)
             
             log.info("%s: new sensor", sensor)
         
         sensor.recv(msg)
     
-    def sensor_clients (self, sensor) :
+    def sensor_clients (self, sensor):
         """
             Yield all ServerClients subscribed to given sensor.
         """
 
-        for client in self.clients.values() :
-            if client.sensors is True or str(sensor) in client.sensors :
+        for client in self.clients.values():
+            if client.sensors is True or str(sensor) in client.sensors:
                 yield client
 
-    def client (self, msg, addr) :
+    def client (self, msg, addr):
         """
             Process a message from a client.
         """
             
         log.debug("%s: %s", pubsub.udp.addrname(addr), msg)
 
-        if msg.seq or msg.ackseq :
+        if msg.seq or msg.ackseq:
             # maintain client state
-            if addr in self.clients :
+            if addr in self.clients:
                 client = self.clients[addr]
-            else :
+            else:
                 # create new stateful client
                 client = self.clients[addr] = ServerClient(self, self.client_port, addr)
 
-            try :
+            try:
                 client.recv(msg)
-            except Exception :
+            except Exception as ex:
                 # XXX: drop message...
                 log.exception("ServerClient %s: %s", client, msg)
 
-        elif msg.type == Message.SUBSCRIBE :
+        elif msg.type == Message.SUBSCRIBE:
             # stateless query
             return self.client_subscribe_query(addr, msg.payload)
 
-        else :
+        else:
             log.warning("Message from unknown client %s: %s", addr, msg)
             return
 
-    def client_subscribe_query (self, addr, sensors=None) :
+    def client_subscribe_query (self, addr, sensors=None):
         """
             Process a subscribe-query message from an unknown client
         """
 
-        if sensors is not None :
+        if sensors is not None:
             log.warning("%s: subscribe-query with payload: %s", pubsub.udp.addrname(addr), sensors)
 
 
@@ -259,7 +270,7 @@ class Server (pubsub.udp.Polling) :
 
         self.client_port(Message(Message.SUBSCRIBE, payload=sensors), addr=addr)
 
-    def __call__ (self) :
+    def __call__ (self):
         """
             Mainloop
         """
@@ -267,11 +278,11 @@ class Server (pubsub.udp.Polling) :
         self.poll_read(self.sensor_port)
         self.poll_read(self.client_port)
 
-        while True :
+        while True:
             try:            
-                for socket, msg in self.poll() :
+                for socket, msg in self.poll():
                     # process
-                    if socket == self.sensor_port :
+                    if socket == self.sensor_port:
                         # Sensors -> dict
                         self.sensor(msg)
                         if msg["dev_id"] in self.loggers :
@@ -279,15 +290,15 @@ class Server (pubsub.udp.Polling) :
                         else :
                             log.error("sensor '%s' not found in sensor.list", msg["dev_id"])
 
-                    elif socket == self.client_port :
+                    elif socket == self.client_port:
                         # Transport -> Message
                         self.client(msg, msg.addr)
 
                     else :
                         log.error("%s: message on unknown socket: %s", socket, msg)
-            except KeyboardInterrupt :
+            except KeyboardInterrupt:
                 # close logs
-                for logger in self.loggers :
+                for logger in self.loggers:
                     self.loggers[logger].close()
                 self.sent_logger.close()
                 print("SIGINT received, shutting down")

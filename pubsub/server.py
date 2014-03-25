@@ -63,10 +63,18 @@ class ServerClient:
         self.sendseq = collections.defaultdict(int)
         self.recvseq = collections.defaultdict(int)
 
+        # detected client magic
+        self.magic = 0
+
     def recv (self, msg):
         """
             Process a message from the client.
         """
+
+        # track changes
+        if msg.magic != self.magic:
+            log.info("%s: detected client magic %#04x -> %#04x", self, self.magic, msg.magic)
+            self.magic = msg.magic
 
         recvseq = self.recvseq[msg.type]
         
@@ -98,14 +106,14 @@ class ServerClient:
         
                     log.info("%s: %s:%d:%s -> %d:%s", self, msg.type_str, msg.seq, msg.payload, seq, payload)
 
-                    self.send(msg.type, payload, seq=seq, ackseq=msg.seq)
+                    self.send(msg.type, payload, magic=msg.magic, seq=seq, ackseq=msg.seq)
 
                     self.sendseq[msg.type] = seq
                 else:
                     # ack
                     log.info("%s: %s:%d:%s -> *", self, msg.type_str, msg.seq, msg.payload)
 
-                    self.send(msg.type, ackseq=msg.seq)
+                    self.send(msg.type, magic=msg.magic, ackseq=msg.seq)
 
     def recv_subscribe (self, seq, sensors):
         """
@@ -145,12 +153,15 @@ class ServerClient:
 
         self.send(Message.PUBLISH, update)
 
-    def send (self, type, payload=None, **opts):
+    def send (self, type, payload=None, magic=None, **opts):
         """
             Build a Message and send it to the client.
         """
 
-        msg = Message(type, payload=payload, **opts)
+        if magic is None :
+            magic = self.magic
+
+        msg = Message(type, payload=payload, magic=magic, **opts)
 
         log.debug("%s: %s", self, msg)
 

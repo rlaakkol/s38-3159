@@ -5,40 +5,7 @@ import logging; log = logging.getLogger('ps-server')
 
 import pubsub.args
 import pubsub.server
-from pubsub.logger import Logger
-
-def main (args):
-    """
-        Publish-Subscribe server.
-    """
-
-    parser = argparse.ArgumentParser(description=__doc__)
-
-    pubsub.args.parser(parser)
-
-    parser.add_argument('-p', '--publish-port', metavar='PORT', required=True,
-            help="Receive sensor updates")
-    parser.add_argument('-s', '--subscribe-port', metavar='PORT', required=True,
-            help="Receive client subscribes")
-
-    args = parser.parse_args(args)
-    
-    pubsub.args.apply(args)
-   
-    # create loggers for sensors
-    SENSOR_FILE = 'sensor.list'
-    sensors = read_sensor_file(SENSOR_FILE)
-    loggers = {}
-
-    for sensor in sensors :
-        loggers[sensor] = Logger('server_%s.log' % sensor)
-    sent_logger = Logger('server_sent.log')
-
-    # server
-    server = pubsub.server.Server(args.publish_port, args.subscribe_port, 
-        sensors, loggers, sent_logger)
-
-    return server()
+import pubsub.logger
 
 def read_sensor_file (filename) :
     """
@@ -53,6 +20,56 @@ def read_sensor_file (filename) :
         log.error('IO error: %s', err)
         # TODO handle error properly
     return sensors
+
+def main (args):
+    """
+        Publish-Subscribe server.
+    """
+
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    pubsub.args.parser(parser)
+    pubsub.logger.parser(parser, component='server')
+
+    parser.add_argument('-p', '--publish-port', metavar='PORT', required=True,
+            help="Receive sensor updates")
+    parser.add_argument('-s', '--subscribe-port', metavar='PORT', required=True,
+            help="Receive client subscribes")
+
+    parser.add_argument('--sensor-list', metavar='FILE', default='sensor.list',
+            help="Path to sensor.list file")
+
+    args = parser.parse_args(args)
+    
+    pubsub.args.apply(args)
+    
+    # logging output directory
+    loggers = pubsub.logger.apply(args)
+   
+    # read sensors.list
+    sensors = read_sensor_file(args.sensor_list)
+    
+
+    # server
+    server = pubsub.server.Server(
+            args.publish_port,
+            args.subscribe_port, 
+            sensors, loggers,
+    )
+    
+    # main
+    try :
+        server()
+
+    except KeyboardInterrupt:
+        log.error("exit on KeyboardInterrupt")
+        return 0
+
+    else :
+        return 0
+
+    finally:
+        loggers.close()
 
 if __name__ == '__main__':
     pubsub.args.main(main)

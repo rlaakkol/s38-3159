@@ -16,10 +16,11 @@ from os import getpid
 
 class Client (pubsub.udp.Polling):
 
-    def __init__ (self, server_ip, server_port):
+    def __init__ (self, server_ip, server_port, loggers):
         """
             server_ip       - str host
             server_port     - str service
+            loggers         - pubsub.logger.LoggerMain
         """
 
         super(Client, self).__init__()
@@ -32,8 +33,8 @@ class Client (pubsub.udp.Polling):
 
         self.sendseq = collections.defaultdict(int)
         self.sendtime = collections.defaultdict(lambda: None)
-
-        self.logger = Logger('client_pid%d.log' % getpid())
+        
+        self.logger = loggers.logger(self.server.sockname())
 
         # subscription state
         self.subscription = None
@@ -199,31 +200,29 @@ class Client (pubsub.udp.Polling):
         
         self.poll_read(self.server)
 
-        try:
-            while True:
-                for type, msg in self.poll(self.poll_timeouts()):
-                    if msg:
-                        if type != self.server:
-                            log.error("poll on invalid socket: %s", socket)
-                            continue
+        while True:
+            for type, msg in self.poll(self.poll_timeouts()):
+                if msg:
+                    # Transport -> Message
+                    
+                    # log all messages received
+                    self.logger.log(time.time(), str(msg))
 
-                        # Transport -> Message
-                        # XXX: check addr matches server addr
-                        
-                        out = self.recv(msg)
+                    # XXX: check addr matches server addr
+                    if type != self.server:
+                        log.error("poll on invalid socket: %s", socket)
+                        continue
+                    
+                    # process message per client state
+                    out = self.recv(msg)
 
-                        if out is not None:
-                            yield msg.type, out
-                            self.logger.log("%s\t%s\n" % (str(time.time()), str(out)))
+                    if out is not None:
+                        yield msg.type, out
 
-                    else:
-                        # timeout
-                        self.sendtime[type] = None
-                        self.timeout(type)
-        except KeyboardInterrupt:
-            self.logger.close()
-            print("Received SIGINT, exiting")
-            return
+                else:
+                    # timeout
+                    self.sendtime[type] = None
+                    self.timeout(type)
 
     def query (self):
         """

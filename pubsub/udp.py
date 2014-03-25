@@ -90,6 +90,20 @@ class Socket (object):
                 
             yield buf, addr
 
+    def sockname (self) :
+        """
+            Socket local address as a human-readble string.
+        """
+
+        return sockname(self.sock)
+
+    def peername (self) :
+        """
+            Socket remote address as a human-readble string.
+        """
+
+        return peername(self.sock)
+
     def __str__ (self):
         try:
             sock_name = sockname(self.sock)

@@ -90,14 +90,14 @@ class Socket (object):
                 
             yield buf, addr
 
-    def sockname (self) :
+    def sockname (self):
         """
             Socket local address as a human-readble string.
         """
 
         return sockname(self.sock)
 
-    def peername (self) :
+    def peername (self):
         """
             Socket remote address as a human-readble string.
         """

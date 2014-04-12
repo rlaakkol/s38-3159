@@ -31,7 +31,7 @@ class ServerSensor:
             Process sensor update, updating all clients that may be subsribed.
         """
 
-        if self.logger :
+        if self.logger:
             # received sensor data
             self.logger.log(time.time(), msg)
 
@@ -169,7 +169,7 @@ class ServerClient:
             Build a Message and send it to the client.
         """
 
-        if magic is None :
+        if magic is None:
             magic = self.magic
 
         msg = Message(type, payload=payload, magic=magic, **opts)
@@ -298,6 +298,6 @@ class Server (pubsub.udp.Polling):
                     # Transport -> Message
                     self.client(msg, msg.addr)
 
-                else :
+                else:
                     log.error("%s: message on unknown socket: %s", socket, msg)
 

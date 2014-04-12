@@ -91,7 +91,7 @@ class Transport (pubsub.udp.Socket):
         # payload
         payload = buf[self.HEADER.size:]
 
-        if compress :
+        if compress:
             # XXX: place some limits on maximum decompressed size
             payload = zlib.decompress(payload)
 
@@ -115,7 +115,7 @@ class Transport (pubsub.udp.Socket):
         # header
         magic = msg.magic
 
-        if not magic :
+        if not magic:
             magic = self.MAGIC
 
         if magic == self.MAGIC_V2:
@@ -132,7 +132,7 @@ class Transport (pubsub.udp.Socket):
                     |   (1 if not msg.noack else 0) << 15
             )
             compress = False
-        else :
+        else:
             raise Error("Invalid magic: {magic:x}".format(magic=magic))
 
         header = self.HEADER.pack(magic, pack_type, unused, msg.ackseq, msg.seq)
@@ -143,7 +143,7 @@ class Transport (pubsub.udp.Socket):
         else:
             payload = pubsub.jsonish.build_bytes(msg.payload)
 
-        if compress :
+        if compress:
             payload = zlib.compress(payload)
         
         return header + payload

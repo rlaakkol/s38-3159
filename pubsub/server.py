@@ -256,21 +256,21 @@ class Server (pubsub.udp.Polling):
 
         self.poll_read(self.sensor_port)
         self.poll_read(self.client_port)
-        event = self.poll()
         while True:
+
             try:
-                socket, msg = next(event)
-            except StopIteration:
-                event = self.poll()
-                continue
-            # process
-            if socket == self.sensor_port:
-                # Sensors -> dict
-                self.sensor(msg)
+                for socket, msg in self.poll():
+                    # process
+                    if socket == self.sensor_port:
+                        # Sensors -> dict
+                        self.sensor(msg)
 
-            elif socket == self.client_port:
-                # Transport -> Message
-                self.client(msg, msg.addr)
+                    elif socket == self.client_port:
+                        # Transport -> Message
+                        self.client(msg, msg.addr)
 
-            else:
-                log.error("%s: message on unknown socket: %s", socket, msg)
+                    else:
+                        log.error("%s: message on unknown socket: %s", socket, msg)
+
+            except pubsub.udp.Timeout as timeout:
+                pass

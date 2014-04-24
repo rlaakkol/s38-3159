@@ -67,7 +67,7 @@ class ServerClient:
         self.transport = transport
         self.addr = addr
 
-        self.sensors = set()
+        self.sensors = dict()
 
         self.sendseq = collections.defaultdict(int)
         self.recvseq = collections.defaultdict(int)
@@ -132,16 +132,24 @@ class ServerClient:
         """
         
         if sensors is True:
+            # TODO: update on sensor change
             # subscribe to all sensors
-            self.sensors = True
+            self.sensors = {sensor:True for sensor in self.server.sensors.keys()}
 
         elif not sensors:
             # unsubscribe from all sensors
-            self.sensors = set()
-        
+            self.sensors.clear()
+
+        # subscribe to given sensors
+        elif isinstance(sensors, list):
+            self.sensors = {sensor:True for sensor in sensors}
+
+        elif isinstance(sensors, dict):
+            # TODO: parse sensor aggregation
+            self.sensors = sensors
+
         else:
-            # subscribe to given sensors
-            self.sensors = set(sensors)
+            log.warning("%s: ignoring invalid subscribe-query payload (%s)" % (self, sensors))
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
@@ -231,7 +239,7 @@ class Server (pubsub.udp.Polling):
         """
 
         for client in self.clients.values():
-            if client.sensors is True or str(sensor) in client.sensors:
+            if str(sensor) in client.sensors:
                 yield client
 
     def client (self, msg, addr):

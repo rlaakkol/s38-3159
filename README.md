@@ -25,9 +25,3 @@
 
         :set tabstop=4 shiftwidth=4 expandtab
 
-*   Function `def` has extra whitespace before argument list
-
-        def foo (bar) :
-            return 42
-
-

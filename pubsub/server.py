@@ -10,7 +10,6 @@ import pubsub.udp
 from pubsub.protocol import Message
 import time
 
-import collections # XXX: protocol
 import logging; log = logging.getLogger('pubsub.server')
 
 class ServerSensor:
@@ -57,76 +56,20 @@ class ServerSensor:
     def __str__ (self):
         return self.dev_id
 
-class ServerClient:
+class ServerClient (pubsub.protocol.Session):
     """
-        Server per-client state.
+        Server per-client state, using Session for protocol state.
     """
 
     def __init__ (self, server, transport, addr, logger=None):
+        pubsub.protocol.Session.__init__(self, transport, addr)
+
         self.server = server
-        self.transport = transport
-        self.addr = addr
 
         self.sensors = set()
-
-        self.sendseq = collections.defaultdict(int)
-        self.recvseq = collections.defaultdict(int)
-
-        # detected client magic
-        self.magic = 0
-
         self.logger = logger
 
-    def recv (self, msg):
-        """
-            Process a message from the client.
-        """
-
-        # track changes
-        if msg.magic != self.magic:
-            log.info("%s: detected client magic %#04x -> %#04x", self, self.magic, msg.magic)
-            self.magic = msg.magic
-
-        recvseq = self.recvseq[msg.type]
-        
-        if msg.seq < recvseq:
-            log.warning("%s: drop duplicate %s:%d < %d", self, msg.type_str, msg.seq, recvseq)
-
-        elif msg.seq == recvseq:
-            log.warning("%s: dupack %s:%d", self, msg.type_str, msg.seq)
-
-            self.send(msg.type, ackseq=msg.seq)
-
-        else:
-            handler = self.RECV[msg.type]
-            
-            try:
-                # process request
-                payload = handler(self, msg.seq, msg.payload)
-
-            except Exception as ex:
-                log.exception("%s: %s", self, msg)
-
-            else:
-                # processed state update
-                self.recvseq[msg.type] = msg.seq
-                
-                if payload:
-                    # ack + response
-                    seq = self.sendseq[msg.type] + 1
-        
-                    log.info("%s: %s:%d:%s -> %d:%s", self, msg.type_str, msg.seq, msg.payload, seq, payload)
-
-                    self.send(msg.type, payload, magic=msg.magic, seq=seq, ackseq=msg.seq)
-
-                    self.sendseq[msg.type] = seq
-                else:
-                    # ack
-                    log.info("%s: %s:%d:%s -> *", self, msg.type_str, msg.seq, msg.payload)
-
-                    self.send(msg.type, magic=msg.magic, ackseq=msg.seq)
-
-    def recv_subscribe (self, seq, sensors):
+    def recv_subscribe (self, sensors):
         """
             Process a subscription request from the client, or query if not seq.
         """
@@ -159,30 +102,17 @@ class ServerClient:
             Send a publish message for the given sensor update.
         """
 
-        # publish
-        log.info("%s: %s", self, update)
-
         self.send(Message.PUBLISH, update)
-
-    def send (self, type, payload=None, magic=None, **opts):
+    
+    def send (self, *args, **opts):
         """
-            Build a Message and send it to the client.
+            Send and log outgoing Messages.
         """
 
-        if magic is None:
-            magic = self.magic
-
-        msg = Message(type, payload=payload, magic=magic, **opts)
-
-        log.debug("%s: %s", self, msg)
-
-        self.transport(msg, addr=self.addr)
+        msg = super(ServerClient, self).send(*args, **opts)
 
         if self.logger:
             self.logger.log(time.time(), str(msg))
-
-    def __str__ (self):
-        return pubsub.udp.addrname(self.addr)
 
 class Server (pubsub.udp.Polling):
     """
@@ -246,10 +176,11 @@ class Server (pubsub.udp.Polling):
             if addr in self.clients:
                 client = self.clients[addr]
             else:
-                # create new stateful client
+                # create new stateful client Session
                 client = self.clients[addr] = ServerClient(self, self.client_port, addr,
                         logger  = self.loggers.logger(pubsub.udp.addrname(addr)),
                 )
+
             try:
                 client.recv(msg)
             except Exception as ex:

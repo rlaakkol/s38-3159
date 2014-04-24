@@ -2,17 +2,21 @@
 import pubsub.jsonish
 import pubsub.udp
 
+import collections
 import logging; log = logging.getLogger('pubsub.protocol')
 import struct
+import time
 import zlib
 
 class Error (Exception):
     pass
 
 class Message (object):
+    # flag bits
     NOACK       = 0x80
     COMPRESS    = 0x40
-
+    
+    # type enum
     SUBSCRIBE   = 0x00
     PUBLISH     = 0x01
     TEARDOWN    = 0x02
@@ -51,7 +55,10 @@ class Message (object):
         return Message.type_name(self.type)
 
     def __str__ (self):
-        return "({self.magic:x}){self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(self=self)
+        return "({magic:x}){self.type_str}[{self.ackseq}:{self.seq}] {self.payload!r}".format(
+                self    = self,
+                magic   = self.magic or 0,
+        )
     
 class Transport (pubsub.udp.Socket):
     """
@@ -179,4 +186,186 @@ class Transport (pubsub.udp.Socket):
         log.debug("%s: %s", addr, msg)
 
         super(Transport, self).__call__(buf, addr=addr)
+
+class Session:
+    """
+        A stateful interchange of Messages between two Transports.
+    """
+
+    def __init__ (self, transport, addr) :
+        self.transport = transport
+        self.addr = addr
+
+        # { Message.TYPE: seq:int }
+        self.sendseq = collections.defaultdict(int)
+        self.recvseq = collections.defaultdict(int)
+
+        # { Message.TYPE: time:float )
+        self.sendtime = collections.defaultdict(lambda: None)
+        
+        # { Message.TYPE: ... }
+        self.sendpayload = { }
+
+        # detected client magic
+        self.magic = None
+    
+    # Message.TYPE: def (self, payload) : response
+    RECV = { }
+
+    def recv (self, msg):
+        """
+            Process an incoming Message from the peer into a RECV handler.
+        """
+        
+        log.debug("%s: %s", self, msg)
+
+        # handle magic (Message syntax)
+        if not self.magic:
+            log.info("%s: magic %#04x", self, msg.magic)
+            self.magic = msg.magic
+
+        elif msg.magic != self.magic:
+            log.warning("%s: magic %#04x <- %#04x", self, msg.magic, self.magic)
+            self.magic = msg.magic
+
+
+        # handle acks
+        if msg.ackseq:
+            # clear timeout for stateful requests
+            sendseq = self.sendseq[msg.type]
+
+            if msg.ackseq < sendseq:
+                log.warning("%s: %s:%d: ignore late ack < %d", self, msg.type_str, msg.ackseq, sendseq)
+
+            elif msg.ackseq > sendseq:
+                log.warning("%s: %s:%d: ignore future ack > %d", self, msg.type_str, msg.ackseq, sendseq)
+
+            else:
+                sendtime = self.sendtime.pop(msg.type)
+                del self.sendpayload[msg.type]
+
+                log.debug("%s: %s:%d: ack @ %fs", self, msg.type_str, msg.ackseq, (time.time() - sendtime))
+        
+        elif self.sendtime.get(msg.type) and not self.sendseq.get(msg.type):
+            # clear timeout for stateless queries
+            sendtime = self.sendtime.pop(msg.type)
+            del self.sendpayload[msg.type]
+       
+
+        # handle payloads
+        recvseq = self.recvseq[msg.type]
+        
+        if not msg.seq and msg.ackseq:
+            # payloadless ack
+            pass
+
+        elif msg.seq < recvseq:
+            log.warning("%s: drop duplicate %s:%d < %d", self, msg.type_str, msg.seq, recvseq)
+
+        elif msg.seq == recvseq and recvseq:
+            log.warning("%s: dupack %s:%d", self, msg.type_str, msg.seq)
+
+            self.transport(Message(msg.type, magic=msg.magic, ackseq=msg.seq), addr=self.addr)
+
+        else:
+            # process state update
+            # XXX: seq might be zero?
+            try :
+                handler = self.RECV[msg.type]
+            except KeyError :
+                log.warning("%s: unknown message type: %s", self, msg)
+                return
+            
+            try:
+                # process request
+                payload = handler(self, msg.payload)
+
+            except Exception as ex:
+                log.exception("%s: %s", self, msg)
+
+            else:
+                # processed state update
+                self.recvseq[msg.type] = msg.seq
+
+                ack = Message(msg.type,
+                        magic   = msg.magic,
+                        ackseq  = msg.seq,
+                )
+                
+                if payload:
+                    # ack + response
+                    seq = self.sendseq[msg.type] + 1
+        
+                    log.info("%s: %s:%d:%s -> %d:%s", self, msg.type_str, msg.seq, msg.payload, seq, payload)
+                    
+                    ack.payload = payload
+                    ack.seq = seq
+
+                    self.sendseq[msg.type] = seq
+
+                else:
+                    # ack
+                    log.info("%s: %s:%d:%s -> *", self, msg.type_str, msg.seq, msg.payload)
+
+                self.transport(ack, addr=self.addr)
+
+    def send (self, type, payload=None, magic=None, seq=True, **opts):
+        """
+            Build a Message and send it to the peer.
+
+            Returns the sent Message.
+        """
+        
+        # magic
+        if magic is None:
+            magic = self.magic
+        
+        if seq:
+            # stateful query auto-sendseq
+            seq = self.sendseq[type] + 1
+        else:
+            seq = 0
+            
+
+        msg = Message(type,
+                magic   = magic,
+                seq     = seq,
+                payload = payload,
+                **opts
+        )
+
+        log.info("%s: %s", self, msg)
+        
+        # send
+        self.sendseq[type] = seq
+        self.transport(msg, addr=self.addr)
+        
+        # update timeout for retry
+        self.sendtime[type] = time.time()
+        self.sendpayload[type] = payload
+
+        return msg
+
+    def retry (self, type):
+        """
+            Handle timeout for given message type by retransmitting the request.
+        """
+        
+        msg = Message(type,
+                magic   = self.magic,
+                seq     = self.sendseq[type],
+                payload = self.sendpayload[type],
+        )
+        
+        log.warning("%s: %s", self, msg)
+
+        # re-send
+        self.transport(msg, addr=self.addr)
+        self.sendtime[type] = time.time()
+
+    def __str__ (self):
+        if self.addr:
+            return pubsub.udp.addrname(self.addr)
+        else :
+            return self.transport.peername()
 

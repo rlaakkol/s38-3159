@@ -10,62 +10,28 @@ import pubsub.udp
 from pubsub.protocol import Message
 from pubsub.logger import Logger
 
-import collections, time # XXX: protocol
+import time # XXX: logging
 import logging; log = logging.getLogger('pubsub.client')
 from os import getpid
 
-class Client (pubsub.udp.Polling):
+class ClientSession (pubsub.protocol.Session):
+    """
+        Outbound state to server.
+    """
 
-    def __init__ (self, server_ip, server_port, loggers):
-        """
-            server_ip       - str host
-            server_port     - str service
-            loggers         - pubsub.logger.LoggerMain
-        """
+    def __init__ (self, client, transport, addr, logger=None) :
+        pubsub.protocol.Session.__init__(self, transport, addr)
 
-        super(Client, self).__init__()
+        self.client = client
+        self.logger = logger
 
-        self.server = pubsub.protocol.Transport.connect(server_ip, server_port,
-                # required for timeouts
-                nonblocking = True
-        )
-        log.info("Connected to server on %s", self.server)
-
-        self.sendseq = collections.defaultdict(int)
-        self.sendtime = collections.defaultdict(lambda: None)
-        
-        self.logger = loggers.logger(self.server.sockname())
-
-        # subscription state
+        # subscription state from server
         self.subscription = None
+        
+        # queued up publishes
+        self.published = []
 
-    def send (self, type, payload=None, seq=None, **opts):
-        """
-            Build a Message and send it to the server.
-        """
-
-        if seq is None and payload is not None:
-            # stateful query auto-sendseq
-            seq = self.sendseq[type] + 1
-            self.sendseq[type] = seq
-
-        elif not seq:
-            # stateless query
-            seq = 0
-
-        msg = Message(type, payload=payload, seq=seq, **opts)
-
-        log.debug("%s", msg)
-
-        self.server(msg)
-
-        self.sendtime[type] = time.time()
-
-    SEND_TIMEOUT = {
-            Message.SUBSCRIBE:  10.0,
-    }
-
-    def send_subscribe (self, sensors=None):
+    def send_subscribe (self, sensors=None, **opts):
         """
             Send a subscribe query/request to the server.
         """
@@ -87,20 +53,19 @@ class Client (pubsub.udp.Polling):
         else:
             raise ValueError(sensors)
             
-        self.send(Message.SUBSCRIBE, subscription)
+        self.send(Message.SUBSCRIBE, subscription, **opts)
 
-        self.subscription = subscription
-
-    def recv_subscribe (self, seq, sensors):
+    def recv_subscribe (self, sensors):
         """
             Process a subscribe-response/update from server.
         """
         
         log.info("%s", sensors)
 
-        return sensors
+        # orly
+        self.subscription = sensors
 
-    def recv_publish (self, seq, update):
+    def recv_publish (self, update):
         """
             Process a publish from the server.
         """
@@ -109,85 +74,57 @@ class Client (pubsub.udp.Polling):
 
         log.info("%s", update)
 
-        return update
+        self.published.append(update)
     
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
             Message.PUBLISH:    recv_publish,
     }
 
+class Client (pubsub.udp.Polling):
+
+    def __init__ (self, server_ip, server_port, loggers):
+        """
+            server_ip       - str host
+            server_port     - str service
+            loggers         - pubsub.logger.LoggerMain
+        """
+
+        super(Client, self).__init__()
+
+        self.server = pubsub.protocol.Transport.connect(server_ip, server_port,
+                # required for timeouts
+                nonblocking = True
+        )
+        log.info("Connected to server on %s", self.server)
+
+        self.logger = loggers.logger(self.server.sockname())
+
+        self.session = ClientSession(self, self.server, None,
+                logger      = self.logger,
+        )
+
     def recv (self, msg):
         """
             Handle received message.
         """
 
-        log.debug("%s", msg)
-        
-        if msg.ackseq:
-            sendseq = self.sendseq[msg.type]
+        # log all messages received
+        self.logger.log(time.time(), str(msg))
 
-            if msg.ackseq < sendseq:
-                log.warning("%s:%d: late ack < %d", msg.type_str, msg.ackseq, sendseq)
+        # stateful or stateless
+        self.session.recv(msg)
 
-            elif msg.ackseq > sendseq:
-                log.warning("%s:%d: future ack > %d", msg.type_str, msg.ackseq, sendseq)
-
-            else:
-                sendtime = self.sendtime.pop(msg.type)
-
-                log.debug("%s:%d: ack @ %fs", msg.type_str, msg.ackseq, (time.time() - sendtime))
-        
-        # XXX: handle as !ackseq && !seq?
-        elif msg.type in self.sendseq and not self.sendseq[msg.type]:
-            # clear sendtime for seqless queries
-            sendtime = self.sendtime.pop(msg.type)
-        
-        if msg.seq or not msg.ackseq:
-            # XXX: check seq
-            if msg.type in self.RECV:
-                ret = self.RECV[msg.type](self, msg.seq, msg.payload)
-                
-                log.debug("%s:%d:%s = %s", msg.type_str, msg.seq, msg.payload, ret)
-
-                return ret
-
-            else:
-                log.warning("Received unknown message type from server: %s", msg)
-
-    def timeout_subscribe (self, seq):
-        """
-            Retransmit subscribe.
-        """
-
-        log.warning("%d:%s", seq, self.subscription)
-        
-        self.send(Message.SUBSCRIBE, self.subscription, seq=seq)
-
-    TIMEOUT = {
-            Message.SUBSCRIBE:  timeout_subscribe,
+    SEND_TIMEOUT = {
+            Message.SUBSCRIBE:  10.0,
     }
-
-    def timeout (self, type):
-        """
-            Handle timeout on given sendtime.
-        """
-
-        seq = self.sendseq[type]
-
-        if type in self.TIMEOUT:
-            log.debug("%s:%d", Message.type_name(type), seq)
-
-            self.TIMEOUT[type](self, seq)
-
-        else:
-            log.warning("%s:%d", Message.type_name(type), seq)
 
     def poll_timeouts (self):
         """
             Collect timeouts for polling.
         """
 
-        for type, sendtime in self.sendtime.items():
+        for type, sendtime in self.session.sendtime.items():
             if sendtime:
                 timeout = sendtime + self.SEND_TIMEOUT[type]
 
@@ -205,52 +142,43 @@ class Client (pubsub.udp.Polling):
                 if msg:
                     # Transport -> Message
                     
-                    # log all messages received
-                    self.logger.log(time.time(), str(msg))
-
-                    # XXX: check addr matches server addr
+                    # XXX: verify sender addr
                     if type != self.server:
                         log.error("poll on invalid socket: %s", socket)
                         continue
                     
                     # process message per client state
-                    out = self.recv(msg)
-
-                    if out is not None:
-                        yield msg.type, out
+                    self.recv(msg)
+                    
+                    yield msg
 
                 else:
                     # timeout
-                    self.sendtime[type] = None
-                    self.timeout(type)
+                    self.session.retry(type)
 
     def query (self):
         """
             Send a query request, and wait for response.
         """
 
-        self.send_subscribe()
+        self.session.send_subscribe(seq=False)
 
-        for type, msg in self:
-            if type == Message.SUBSCRIBE:
-                return msg
-
-            else:
-                log.warning("unknown response to subscribe-query: %d:%s", type, msg)
+        for msg in self:
+            if self.session.subscription is not None :
+                return self.session.subscription
 
     def subscribe (self, sensors=True):
         """
             Setup a subscription, and yield sensor publishes.
         """
 
-        self.send_subscribe(sensors)
+        self.session.send_subscribe(sensors)
 
-        for type, msg in self:
-            if type == Message.PUBLISH:
-                yield msg
+        for msg in self:
+            for publish in self.session.published :
+                yield publish
 
-            else:
-                log.warning("unhandled response to subscribe-request: %d:%s", type, msg)
+            self.session.published = []
 
     def __str__ (self):
         return str(self.server)

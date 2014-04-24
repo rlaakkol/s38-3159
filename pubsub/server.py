@@ -8,6 +8,7 @@ import pubsub.sensors
 import pubsub.udp
 
 from pubsub.protocol import Message
+import time
 
 import collections # XXX: protocol
 import logging; log = logging.getLogger('pubsub.server')
@@ -17,14 +18,22 @@ class ServerSensor:
         Server per-sensor state
     """
 
-    def __init__ (self, server, dev_id):
+    def __init__ (self, server, dev_id, logger=None):
+        """
+            logger  - (optional) per-sensor log of received updates
+        """
         self.server = server
         self.dev_id = dev_id
+        self.logger = logger
 
     def recv (self, msg):
         """
             Process sensor update, updating all clients that may be subsribed.
         """
+
+        if self.logger:
+            # received sensor data
+            self.logger.log(time.time(), msg)
 
         # reprocess
         update = {
@@ -53,7 +62,7 @@ class ServerClient:
         Server per-client state.
     """
 
-    def __init__ (self, server, transport, addr):
+    def __init__ (self, server, transport, addr, logger=None):
         self.server = server
         self.transport = transport
         self.addr = addr
@@ -65,6 +74,8 @@ class ServerClient:
 
         # detected client magic
         self.magic = 0
+
+        self.logger = logger
 
     def recv (self, msg):
         """
@@ -158,7 +169,7 @@ class ServerClient:
             Build a Message and send it to the client.
         """
 
-        if magic is None :
+        if magic is None:
             magic = self.magic
 
         msg = Message(type, payload=payload, magic=magic, **opts)
@@ -166,6 +177,9 @@ class ServerClient:
         log.debug("%s: %s", self, msg)
 
         self.transport(msg, addr=self.addr)
+
+        if self.logger:
+            self.logger.log(time.time(), str(msg))
 
     def __str__ (self):
         return pubsub.udp.addrname(self.addr)
@@ -175,8 +189,14 @@ class Server (pubsub.udp.Polling):
         Server state/logic implementation.
     """
 
-    def __init__ (self, publish_port, subscribe_port):
+    def __init__ (self, publish_port, subscribe_port, sensors, loggers): 
         super(Server, self).__init__()
+
+        # { dev_id: ServerSensor }
+        self.sensors = { }
+
+        # { addr: ServerClient }
+        self.clients = { }
 
         self.sensor_port = pubsub.sensors.Transport.listen(publish_port, nonblocking=True)
         log.info("Listening for sensor publish messages on %s", self.sensor_port)
@@ -184,12 +204,8 @@ class Server (pubsub.udp.Polling):
         self.client_port = pubsub.protocol.Transport.listen(subscribe_port, nonblocking=True)
         log.info("Listening for client subscribe messages on %s", self.client_port)
 
-        # { dev_id: ServerSensor }
-        self.sensors = { }
-        
-        # { addr: ServerClient }
-        self.clients = { }
-        
+        self.loggers = loggers
+
     def sensor (self, msg):
         """
             Process a publish message from a sensor.
@@ -201,7 +217,9 @@ class Server (pubsub.udp.Polling):
         if sensor_id in self.sensors:
             sensor = self.sensors[sensor_id]
         else:
-            sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id)
+            sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id,
+                    logger  = self.loggers.logger(sensor_id),
+            )
             
             log.info("%s: new sensor", sensor)
         
@@ -229,8 +247,9 @@ class Server (pubsub.udp.Polling):
                 client = self.clients[addr]
             else:
                 # create new stateful client
-                client = self.clients[addr] = ServerClient(self, self.client_port, addr)
-
+                client = self.clients[addr] = ServerClient(self, self.client_port, addr,
+                        logger  = self.loggers.logger(pubsub.udp.addrname(addr)),
+                )
             try:
                 client.recv(msg)
             except Exception as ex:
@@ -281,3 +300,4 @@ class Server (pubsub.udp.Polling):
 
                 else:
                     log.error("%s: message on unknown socket: %s", socket, msg)
+

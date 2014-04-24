@@ -3,22 +3,24 @@
     Publish-Subscribe client.
 """
 
-
 import pubsub.jsonish
 import pubsub.protocol
 import pubsub.udp
 
 from pubsub.protocol import Message
+from pubsub.logger import Logger
 
 import collections, time # XXX: protocol
 import logging; log = logging.getLogger('pubsub.client')
+from os import getpid
 
 class Client (pubsub.udp.Polling):
 
-    def __init__ (self, server_ip, server_port):
+    def __init__ (self, server_ip, server_port, loggers):
         """
             server_ip       - str host
             server_port     - str service
+            loggers         - pubsub.logger.LoggerMain
         """
 
         super(Client, self).__init__()
@@ -31,6 +33,8 @@ class Client (pubsub.udp.Polling):
 
         self.sendseq = collections.defaultdict(int)
         self.sendtime = collections.defaultdict(lambda: None)
+        
+        self.logger = loggers.logger(self.server.sockname())
 
         # subscription state
         self.subscription = None
@@ -114,7 +118,7 @@ class Client (pubsub.udp.Polling):
 
     def recv (self, msg):
         """
-            Handle recevied message.
+            Handle received message.
         """
 
         log.debug("%s", msg)
@@ -199,13 +203,17 @@ class Client (pubsub.udp.Polling):
         while True:
             for type, msg in self.poll(self.poll_timeouts()):
                 if msg:
+                    # Transport -> Message
+                    
+                    # log all messages received
+                    self.logger.log(time.time(), str(msg))
+
+                    # XXX: check addr matches server addr
                     if type != self.server:
                         log.error("poll on invalid socket: %s", socket)
                         continue
-
-                    # Transport -> Message
-                    # XXX: check addr matches server addr
                     
+                    # process message per client state
                     out = self.recv(msg)
 
                     if out is not None:
@@ -214,7 +222,6 @@ class Client (pubsub.udp.Polling):
                 else:
                     # timeout
                     self.sendtime[type] = None
-
                     self.timeout(type)
 
     def query (self):

@@ -14,6 +14,7 @@ def main (args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     pubsub.args.parser(parser)
+    pubsub.logger.parser(parser, component='client')
     
     parser.add_argument('-s', '--server-ip', metavar='IP', required=True,
             help="Publish server address")
@@ -28,25 +29,41 @@ def main (args):
     args = parser.parse_args(args)
     
     pubsub.args.apply(args)
+    loggers = pubsub.logger.apply(args)
 
     # client
-    client = pubsub.client.Client(args.server_ip, args.server_port)
+    client = pubsub.client.Client(
+            args.server_ip,
+            args.server_port,
+            loggers,
+    )
     
-    if args.list:
-        # query
-        for sensor in client.query():
-            print(sensor)
+    try:
+        if args.list:
+            # query
+            for sensor in client.query():
+                print(sensor)
 
-    if not args.list or args.sensors:
+        if not args.list or args.sensors:
 
-        if args.sensors:
-            sub = client.subscribe(args.sensors)
-        else:
-            sub = client.subscribe()
+            if args.sensors:
+                sub = client.subscribe(args.sensors)
+            else:
+                sub = client.subscribe()
 
-        # subscribe -> publish
-        for update in sub:
-            print(update)
+            # subscribe -> publish
+            for update in sub:
+                print(update)
+
+    except KeyboardInterrupt:
+        log.error("exit on KeyboardInterrupt")
+        return 0
+
+    else:
+        return 0
+
+    finally:
+        loggers.close()
 
 if __name__ == '__main__':
     pubsub.args.main(main)

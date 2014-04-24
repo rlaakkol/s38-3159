@@ -286,18 +286,22 @@ class Server (pubsub.udp.Polling):
 
         self.poll_read(self.sensor_port)
         self.poll_read(self.client_port)
-
         while True:
-            for socket, msg in self.poll():
-                # process
-                if socket == self.sensor_port:
-                    # Sensors -> dict
-                    self.sensor(msg)
 
-                elif socket == self.client_port:
-                    # Transport -> Message
-                    self.client(msg, msg.addr)
+            try:
+                for socket, msg in self.poll():
+                    # process
+                    if socket == self.sensor_port:
+                        # Sensors -> dict
+                        self.sensor(msg)
 
-                else:
-                    log.error("%s: message on unknown socket: %s", socket, msg)
+                    elif socket == self.client_port:
+                        # Transport -> Message
+                        self.client(msg, msg.addr)
+
+                    else:
+                        log.error("%s: message on unknown socket: %s", socket, msg)
+
+            except pubsub.udp.Timeout as timeout:
+                pass
 

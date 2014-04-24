@@ -220,5 +220,11 @@ class Polling:
             log.debug("%s: timeout", poll_timer)
 
             # timeout
-            yield poll_timer, None
+            raise Timeout(poll_timer)
 
+class Timeout(Exception):
+    def __init__(self, value):
+        self.timer = value
+
+    def __str__(self):
+        return repr(self.timer)

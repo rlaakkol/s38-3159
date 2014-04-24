@@ -199,30 +199,27 @@ class Client (pubsub.udp.Polling):
         """
         
         self.poll_read(self.server)
-
         while True:
-            for type, msg in self.poll(self.poll_timeouts()):
-                if msg:
-                    # Transport -> Message
-                    
-                    # log all messages received
-                    self.logger.log(time.time(), str(msg))
 
-                    # XXX: check addr matches server addr
-                    if type != self.server:
-                        log.error("poll on invalid socket: %s", socket)
-                        continue
-                    
-                    # process message per client state
-                    out = self.recv(msg)
+            try: 
+                for type, msg in self.poll(self.poll_timeouts()):
+                    if msg:
+                        if type != self.server:
+                            log.error("poll on invalid socket: %s", socket)
+                            continue
 
-                    if out is not None:
-                        yield msg.type, out
+                        # Transport -> Message
+                        # XXX: check addr matches server addr
+                        
+                        out = self.recv(msg)
 
-                else:
+                        if out is not None:
+                            yield msg.type, out
+
+            except pubsub.udp.Timeout as timeout:
                     # timeout
-                    self.sendtime[type] = None
-                    self.timeout(type)
+                self.sendtime[timeout.timer] = None
+                self.timeout(timeout.timer)
 
     def query (self):
         """

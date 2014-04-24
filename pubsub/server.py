@@ -22,9 +22,26 @@ class ServerSensor:
         """
             logger  - (optional) per-sensor log of received updates
         """
+        
         self.server = server
-        self.dev_id = dev_id
+
         self.logger = logger
+        dev = dev_id.split("_")
+        # TODO: what if no dash?
+        self.dev_type = dev[0]
+        self.dev_id = dev[1]
+
+    def parse_temp_data(self, data):
+        temp = data.split(' ')
+        return float(temp[0])
+
+    def parse_sensor_data (self, data):
+        opts = {'temp': self.parse_temp_data,
+                'camera': lambda s: s,
+                'asd': lambda s: s,
+                }
+
+        return opts.get(self.dev_type, pubsub.jsonish.parse)(data)
 
     def recv (self, msg):
         """
@@ -35,12 +52,14 @@ class ServerSensor:
             # received sensor data
             self.logger.log(time.time(), msg)
 
+
+
         # reprocess
         update = {
-                'dev_id':       msg['dev_id'],
-                'sensor_data':  msg['sensor_data'],
-                'seq_no':       pubsub.jsonish.parse(msg['seq_no']),
-                'ts':           pubsub.jsonish.parse(msg['ts']),
+                self.dev_type + ':' + self.dev_id: {self.dev_type:  self.parse_sensor_data(msg['sensor_data']),
+                                                    'seq_no':       pubsub.jsonish.parse(msg['seq_no']),
+                                                    'ts':           pubsub.jsonish.parse(msg['ts']),
+                },
                 # data_size
         }
 

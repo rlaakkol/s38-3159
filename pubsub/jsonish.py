@@ -237,12 +237,19 @@ def parse (str):
         True
         >>> parse("false")
         False
+        >>> parse("-32.6 C")
+        Traceback (most recent call last):
+        ...
+        ParseError: Unable to parse trailing crap.
     """
 
     i = iter(str)
     c = parse_next(i)
 
     val, c = parse_item(c, i)
+
+    if c:
+        raise ParseError("Unable to parse trailing crap.")
 
     return val
 

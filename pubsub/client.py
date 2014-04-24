@@ -105,7 +105,7 @@ class Client (pubsub.udp.Polling):
             Process a publish from the server.
         """
 
-        update = { update['dev_id']: update['sensor_data'] }
+        #update = { update['dev_id']: update['sensor_data'] }
 
         log.info("%s", update)
 

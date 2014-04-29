@@ -22,9 +22,8 @@ class ServerSensor:
         """
             logger  - (optional) per-sensor log of received updates
         """
-        
-        self.server = server
 
+        self.server = server
         self.logger = logger
         dev = dev_id.split("_")
         # TODO: what if no dash?
@@ -51,7 +50,6 @@ class ServerSensor:
         if self.logger:
             # received sensor data
             self.logger.log(time.time(), msg)
-
 
 
         # reprocess
@@ -87,6 +85,7 @@ class ServerClient:
         self.addr = addr
 
         self.sensors = dict()
+        self.sensors_all = False
 
         self.sendseq = collections.defaultdict(int)
         self.recvseq = collections.defaultdict(int)
@@ -154,18 +153,22 @@ class ServerClient:
             # TODO: update on sensor change
             # subscribe to all sensors
             self.sensors = {sensor:True for sensor in self.server.sensors.keys()}
+            self.sensors_all = True
 
         elif not sensors:
             # unsubscribe from all sensors
             self.sensors.clear()
+            self.sensors_all = False
 
         # subscribe to given sensors
         elif isinstance(sensors, list):
             self.sensors = {sensor:True for sensor in sensors}
+            self.sensors_all = False
 
         elif isinstance(sensors, dict):
             # TODO: parse sensor aggregation
             self.sensors = sensors
+            self.sensors_all = False
 
         else:
             log.warning("%s: ignoring invalid subscribe-query payload (%s)" % (self, sensors))
@@ -180,6 +183,14 @@ class ServerClient:
         """
 
         self.send_publish(update)
+
+    def sensor_add (self, sensor):
+        """
+            Process the addition of a new sensor.
+        """
+        # subscribed to all sensors
+        # TODO: send subscribe update
+        self.sensors[str(sensor)] = self.sensors_all
 
     def send_publish (self, update):
         """
@@ -247,6 +258,9 @@ class Server (pubsub.udp.Polling):
             sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id,
                     logger  = self.loggers.logger(sensor_id),
             )
+            # push new sensor to clients
+            for client in self.clients.values():
+                client.sensor_add(sensor)
             
             log.info("%s: new sensor", sensor)
         

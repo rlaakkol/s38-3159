@@ -70,7 +70,7 @@ class ClientSession (pubsub.protocol.Session):
             Process a publish from the server.
         """
 
-        update = { update['dev_id']: update['sensor_data'] }
+        #update = { update['dev_id']: update['sensor_data'] }
 
         log.info("%s", update)
 
@@ -136,12 +136,11 @@ class Client (pubsub.udp.Polling):
         """
         
         self.poll_read(self.server)
-
         while True:
-            for type, msg in self.poll(self.poll_timeouts()):
-                if msg:
+            try: 
+                for type, msg in self.poll(self.poll_timeouts()):
                     # Transport -> Message
-                    
+
                     # XXX: verify sender addr
                     if type != self.server:
                         log.error("poll on invalid socket: %s", socket)
@@ -152,9 +151,9 @@ class Client (pubsub.udp.Polling):
                     
                     yield msg
 
-                else:
-                    # timeout
-                    self.session.retry(type)
+            except pubsub.udp.Timeout as timeout:
+                # timeout
+                self.session.retry(timeout.timer)
 
     def query (self):
         """

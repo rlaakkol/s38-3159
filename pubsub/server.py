@@ -21,9 +21,25 @@ class ServerSensor:
         """
             logger  - (optional) per-sensor log of received updates
         """
+
         self.server = server
-        self.dev_id = dev_id
         self.logger = logger
+        dev = dev_id.split("_")
+        # TODO: what if no dash?
+        self.dev_type = dev[0]
+        self.dev_id = dev[1]
+
+    def parse_temp_data(self, data):
+        temp = data.split(' ')
+        return float(temp[0])
+
+    def parse_sensor_data (self, data):
+        opts = {'temp': self.parse_temp_data,
+                'camera': lambda s: s,
+                'asd': lambda s: s,
+                }
+
+        return opts.get(self.dev_type, pubsub.jsonish.parse)(data)
 
     def recv (self, msg):
         """
@@ -34,12 +50,13 @@ class ServerSensor:
             # received sensor data
             self.logger.log(time.time(), msg)
 
+
         # reprocess
         update = {
-                'dev_id':       msg['dev_id'],
-                'sensor_data':  msg['sensor_data'],
-                'seq_no':       pubsub.jsonish.parse(msg['seq_no']),
-                'ts':           pubsub.jsonish.parse(msg['ts']),
+                self.dev_type + ':' + self.dev_id: {self.dev_type:  self.parse_sensor_data(msg['sensor_data']),
+                                                    'seq_no':       pubsub.jsonish.parse(msg['seq_no']),
+                                                    'ts':           pubsub.jsonish.parse(msg['ts']),
+                },
                 # data_size
         }
 
@@ -65,9 +82,10 @@ class ServerClient (pubsub.protocol.Session):
         pubsub.protocol.Session.__init__(self, transport, addr)
 
         self.server = server
-
-        self.sensors = set()
         self.logger = logger
+
+        self.sensors = dict()
+        self.sensors_all = False
 
     def recv_subscribe (self, sensors):
         """
@@ -75,16 +93,28 @@ class ServerClient (pubsub.protocol.Session):
         """
         
         if sensors is True:
+            # TODO: update on sensor change
             # subscribe to all sensors
-            self.sensors = True
+            self.sensors = {sensor:True for sensor in self.server.sensors.keys()}
+            self.sensors_all = True
 
         elif not sensors:
             # unsubscribe from all sensors
-            self.sensors = set()
-        
+            self.sensors.clear()
+            self.sensors_all = False
+
+        # subscribe to given sensors
+        elif isinstance(sensors, list):
+            self.sensors = {sensor:True for sensor in sensors}
+            self.sensors_all = False
+
+        elif isinstance(sensors, dict):
+            # TODO: parse sensor aggregation
+            self.sensors = sensors
+            self.sensors_all = False
+
         else:
-            # subscribe to given sensors
-            self.sensors = set(sensors)
+            log.warning("%s: ignoring invalid subscribe-query payload (%s)" % (self, sensors))
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
@@ -96,6 +126,14 @@ class ServerClient (pubsub.protocol.Session):
         """
 
         self.send_publish(update)
+
+    def sensor_add (self, sensor):
+        """
+            Process the addition of a new sensor.
+        """
+        # subscribed to all sensors
+        # TODO: send subscribe update
+        self.sensors[str(sensor)] = self.sensors_all
 
     def send_publish (self, update):
         """
@@ -150,6 +188,9 @@ class Server (pubsub.udp.Polling):
             sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id,
                     logger  = self.loggers.logger(sensor_id),
             )
+            # push new sensor to clients
+            for client in self.clients.values():
+                client.sensor_add(sensor)
             
             log.info("%s: new sensor", sensor)
         
@@ -161,7 +202,7 @@ class Server (pubsub.udp.Polling):
         """
 
         for client in self.clients.values():
-            if client.sensors is True or str(sensor) in client.sensors:
+            if str(sensor) in client.sensors:
                 yield client
 
     def client (self, msg, addr):
@@ -217,18 +258,22 @@ class Server (pubsub.udp.Polling):
 
         self.poll_read(self.sensor_port)
         self.poll_read(self.client_port)
-
         while True:
-            for socket, msg in self.poll():
-                # process
-                if socket == self.sensor_port:
-                    # Sensors -> dict
-                    self.sensor(msg)
 
-                elif socket == self.client_port:
-                    # Transport -> Message
-                    self.client(msg, msg.addr)
+            try:
+                for socket, msg in self.poll():
+                    # process
+                    if socket == self.sensor_port:
+                        # Sensors -> dict
+                        self.sensor(msg)
 
-                else:
-                    log.error("%s: message on unknown socket: %s", socket, msg)
+                    elif socket == self.client_port:
+                        # Transport -> Message
+                        self.client(msg, msg.addr)
+
+                    else:
+                        log.error("%s: message on unknown socket: %s", socket, msg)
+
+            except pubsub.udp.Timeout as timeout:
+                pass
 

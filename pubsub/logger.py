@@ -31,7 +31,7 @@ class LoggerMain:
 
         if not os.path.exists(dir):
             log.warn("%s: mkdir", dir)
-            os.mkdir(dir)
+            os.makedirs(dir, exist_ok=True)
     
     def logger (self, logger):
         if logger not in self.loggers:

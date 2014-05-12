@@ -32,6 +32,15 @@ class ClientSession (pubsub.protocol.Session):
         # queued up publishes
         self.published = []
 
+    def query_subscribe (self):
+        """
+            Send a stateless subscribe-query to the server.
+        """
+
+        log.info("")
+
+        self.query(Message.SUBSCRIBE)
+
     def send_subscribe (self, sensors=None, **opts):
         """
             Send a subscribe query/request to the server.
@@ -56,17 +65,20 @@ class ClientSession (pubsub.protocol.Session):
             
         self.send(Message.SUBSCRIBE, subscription, **opts)
 
-    def recv_subscribe (self, sensors):
+    def recv_subscribe (self, subscription):
         """
             Process a subscribe-response/update from server.
+
+            XXX: also handles subscribe-queryresponse, which has a different format!
 
             Maintains the subscription set in self.subscription.
         """
         
-        log.info("%s", sensors)
+        log.info("%s", subscription)
 
-        # orly
-        self.subscription = sensors
+        # update subscription state
+        # XXX: this may also be a subscribe-queryresponse sensor list
+        self.subscription = subscription
 
     def recv_publish (self, update):
         """
@@ -174,10 +186,13 @@ class Client (pubsub.udp.Polling):
 
     def query (self):
         """
-            Send a query request, and wait for response.
-        """
+            Send a query request, and return response list:
 
-        self.session.send_subscribe(seq=False)
+                [ 'type:id' ]
+        """
+        
+        # using session for timeout/retry
+        self.session.query_subscribe()
 
         for msg in self:
             # process messages until we get a subscription back
@@ -186,7 +201,7 @@ class Client (pubsub.udp.Polling):
 
     def subscribe (self, sensors=True):
         """
-            Setup a subscription, and yield sensor publishes:
+            Setup a stateful subscription, and yield sensor publishes:
 
                 (sensor_type, sensor_id, { update })
 

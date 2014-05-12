@@ -142,7 +142,10 @@ class Transport (pubsub.udp.Socket):
         else:
             raise Error("Invalid magic: {magic:x}".format(magic=magic))
 
-        header = self.HEADER.pack(magic, pack_type, unused, msg.ackseq, msg.seq)
+        header = self.HEADER.pack(magic, pack_type, unused,
+                msg.ackseq or 0,
+                msg.seq or 0,
+        )
 
         # payload
         if msg.payload is None:
@@ -186,6 +189,29 @@ class Transport (pubsub.udp.Socket):
         log.debug("%s: %s", addr, msg)
 
         super(Transport, self).__call__(buf, addr=addr)
+
+    def send (self, type, payload=None, addr=None, magic=None, **opts):
+        """
+            Build a stateless Message and send it to the peer.
+
+            Returns the sent Message.
+        """
+        
+        # magic
+        if magic is None:
+            magic = self.MAGIC
+        
+        msg = Message(type,
+                magic   = magic,
+                payload = payload,
+                **opts
+        )
+
+        log.info("%s: %s", self, msg)
+        
+        self(msg, addr=addr)
+        
+        return msg
 
 class Session:
     """
@@ -247,7 +273,7 @@ class Session:
                 log.debug("%s: %s:%d: ack @ %fs", self, msg.type_str, msg.ackseq, (time.time() - sendtime))
         
         elif self.sendtime.get(msg.type) and not self.sendseq.get(msg.type):
-            # clear timeout for stateless queries
+            # clear timeout for stateless query response
             sendtime = self.sendtime.pop(msg.type)
             del self.sendpayload[msg.type]
        
@@ -259,7 +285,7 @@ class Session:
             # payloadless ack
             pass
 
-        elif msg.seq < recvseq:
+        elif msg.seq and msg.seq < recvseq:
             log.warning("%s: drop duplicate %s:%d < %d", self, msg.type_str, msg.seq, recvseq)
 
         elif msg.seq == recvseq and recvseq:
@@ -277,7 +303,7 @@ class Session:
                 return
             
             try:
-                # process request
+                # process request -> response?
                 payload = handler(self, msg.payload)
 
             except Exception as ex:
@@ -285,13 +311,15 @@ class Session:
 
             else:
                 # processed state update
-                self.recvseq[msg.type] = msg.seq
+                if msg.seq:
+                    self.recvseq[msg.type] = msg.seq
 
                 ack = Message(msg.type,
                         magic   = msg.magic,
                         ackseq  = msg.seq,
                 )
                 
+                # response?
                 if payload:
                     # ack + response
                     seq = self.sendseq[msg.type] + 1
@@ -309,38 +337,61 @@ class Session:
 
                 self.transport(ack, addr=self.addr)
 
-    def send (self, type, payload=None, magic=None, seq=True, **opts):
+    def query (self, type, payload=None, **opts):
         """
-            Build a Message and send it to the peer.
+            Build a stateless query Message and send it to the peer.
+
+            Schedules timeout for response.
 
             Returns the sent Message.
         """
         
-        # magic
-        if magic is None:
-            magic = self.magic
-        
-        if seq:
-            # stateful query auto-sendseq
-            seq = self.sendseq[type] + 1
-        else:
-            seq = 0
-            
-
         msg = Message(type,
-                magic   = magic,
+                magic   = self.magic,
+                payload = payload,
+                **opts
+        )
+
+        # send
+        log.info("%s: %s", self, msg)
+        
+        self.transport(msg, self.addr)
+        
+        # update state for timeout/retry
+        self.sendseq[type] = None
+        self.sendtime[type] = time.time()
+        self.sendpayload[type] = payload
+
+        return msg
+
+    def send (self, type, payload=None, **opts):
+        """
+            Build a new request Message and send it to the peer.
+
+            Updates sendseq++ and schedules timeout for ack.
+
+            Returns the sent Message.
+        """
+        
+        # stateful query auto-sendseq
+        seq = self.sendseq[type] + 1
+        
+        # XXX: should this happen before or after sending, in case of send error?
+        self.sendseq[type] = seq
+         
+        msg = Message(type,
+                magic   = self.magic,
                 seq     = seq,
                 payload = payload,
                 **opts
         )
 
+        # send
         log.info("%s: %s", self, msg)
         
-        # send
-        self.sendseq[type] = seq
-        self.transport(msg, addr=self.addr)
+        self.transport(msg, self.addr)
         
-        # update timeout for retry
+        # update state for timeout/retry
         self.sendtime[type] = time.time()
         self.sendpayload[type] = payload
 
@@ -349,6 +400,8 @@ class Session:
     def retry (self, type):
         """
             Handle timeout for given message type by retransmitting the request.
+
+            Uses the seq/payload state saved by send().
         """
         
         msg = Message(type,
@@ -357,11 +410,15 @@ class Session:
                 payload = self.sendpayload[type],
         )
         
+        # send
         log.warning("%s: %s", self, msg)
+        
+        self.transport(msg, self.addr)
 
-        # re-send
-        self.transport(msg, addr=self.addr)
+        # update state
         self.sendtime[type] = time.time()
+
+        return msg
 
     def __str__ (self):
         if self.addr:

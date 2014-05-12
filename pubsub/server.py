@@ -70,7 +70,7 @@ class ServerClient (pubsub.protocol.Session):
 
     def recv_subscribe (self, sensors):
         """
-            Process a subscription request from the client, or query if not seq.
+            Process a subscription request from the client.
         """
         
         if sensors is True:
@@ -238,8 +238,16 @@ class Server (pubsub.udp.Polling):
                 log.exception("ServerClient %s: %s", client, msg)
 
         elif msg.type == Message.SUBSCRIBE:
-            # stateless query
-            self.client_subscribe_query(addr, msg.payload)
+            try:
+                # stateless query
+                payload = self.client_subscribe_query(addr, msg.payload)
+            
+                # stateless response
+                self.client_port.send(Message.SUBSCRIBE, payload, addr=addr)
+
+            except Exception as ex:
+                # XXX: drop message...
+                log.exception("ServerClient %s: %s", pubsub.udp.addrname(addr), msg)
 
         else:
             log.warning("Unknown Message from unknown client %s: %s", addr, msg)
@@ -251,12 +259,13 @@ class Server (pubsub.udp.Polling):
 
         if sensors is not None:
             log.warning("%s: subscribe-query with payload: %s", pubsub.udp.addrname(addr), sensors)
-
+        
+        # response
         sensors = [str(sensor) for sensor in self.sensors.values()]
 
         log.info("%s: %s", pubsub.udp.addrname(addr), sensors)
 
-        self.client_port(Message(Message.SUBSCRIBE, payload=sensors), addr=addr)
+        return sensors
 
     def __call__ (self):
         """

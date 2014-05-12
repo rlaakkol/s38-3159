@@ -267,10 +267,10 @@ class Session:
                 log.warning("%s: %s:%d: ignore future ack > %d", self, msg.type_str, msg.ackseq, sendseq)
 
             else:
-                sendtime = self.sendtime.pop(msg.type)
-                del self.sendpayload[msg.type]
+                sendtime = self.sendtime.pop(msg.type, None)
+                self.sendpayload.pop(msg.type, None)
 
-                log.debug("%s: %s:%d: ack @ %fs", self, msg.type_str, msg.ackseq, (time.time() - sendtime))
+                log.debug("%s: %s:%d: ack @ %fs", self, msg.type_str, msg.ackseq, (time.time() - sendtime) if sendtime else '...')
         
         elif self.sendtime.get(msg.type) and not self.sendseq.get(msg.type):
             # clear timeout for stateless query response
@@ -328,8 +328,12 @@ class Session:
                     
                     ack.payload = payload
                     ack.seq = seq
-
+                    
                     self.sendseq[msg.type] = seq
+
+                    # XXX: should we be timing these out? The client will be retransmitting, but we will only be ack'ing those retransmissions..
+                    self.sendtime[msg.type] = time.time()
+                    self.sendpayload[msg.type] = payload
 
                 else:
                     # ack

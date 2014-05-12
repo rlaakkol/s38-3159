@@ -17,61 +17,42 @@ class ServerSensor:
         Server per-sensor state
     """
 
-    def __init__ (self, server, dev_id, logger=None):
+    def __init__ (self, server, type, id, logger=None):
         """
             logger  - (optional) per-sensor log of received updates
         """
 
         self.server = server
         self.logger = logger
-        dev = dev_id.split("_")
-        # TODO: what if no dash?
-        self.dev_type = dev[0]
-        self.dev_id = dev[1]
+        
+        # parsed sensor name
+        self.type = type
+        self.id = id
 
-    def parse_temp_data(self, data):
-        temp = data.split(' ')
-        return float(temp[0])
-
-    def parse_sensor_data (self, data):
-        opts = {'temp': self.parse_temp_data,
-                'camera': lambda s: s,
-                'asd': lambda s: s,
-                }
-
-        return opts.get(self.dev_type, pubsub.jsonish.parse)(data)
-
-    def recv (self, msg):
+    def update (self, update, msg):
         """
-            Process sensor update, updating all clients that may be subsribed.
+            Process sensor update, updating all clients that may be subscribed.
+                
+                update:     { 'ts': float, 'seq_no': int, type: ... }
+                msg:        legacy sensor dict
         """
 
         if self.logger:
             # received sensor data
-            self.logger.log(time.time(), msg)
-
-
-        # reprocess
-        update = {
-                self.dev_type + ':' + self.dev_id: {self.dev_type:  self.parse_sensor_data(msg['sensor_data']),
-                                                    'seq_no':       pubsub.jsonish.parse(msg['seq_no']),
-                                                    'ts':           pubsub.jsonish.parse(msg['ts']),
-                },
-                # data_size
-        }
+            self.logger.log(time.time(), update)
 
         # update clients
         log.info("%s: %s", self, update)
 
         for client in self.server.sensor_clients(self):
             try:
-                client.sensor_update(self, update)
+                client.sensor_update(self, update, msg)
             except Exception as ex:
                 # XXX: drop update...
                 log.exception("ServerClient %s: sensor_update %s:%s", client, self, update)
         
     def __str__ (self):
-        return self.dev_id
+        return '{self.type}:{self.id}'.format(self=self)
 
 class ServerClient (pubsub.protocol.Session):
     """
@@ -120,12 +101,19 @@ class ServerClient (pubsub.protocol.Session):
             Message.SUBSCRIBE:  recv_subscribe,
     }
 
-    def sensor_update (self, sensor, update):
+    def sensor_update (self, sensor, update, legacy_msg):
         """
             Process sensor update.
         """
 
-        self.send_publish(update)
+        if self.magic == 0x43:
+            payload = { str(sensor): update }
+
+        elif self.magic == 0x42:
+            # pass through...
+            payload = legacy_msg
+
+        self.send_publish(payload)
 
     def sensor_add (self, sensor):
         """
@@ -160,7 +148,7 @@ class Server (pubsub.udp.Polling):
     def __init__ (self, publish_port, subscribe_port, sensors, loggers): 
         super(Server, self).__init__()
 
-        # { dev_id: ServerSensor }
+        # { sensor: ServerSensor }
         self.sensors = { }
 
         # { addr: ServerClient }
@@ -178,27 +166,46 @@ class Server (pubsub.udp.Polling):
         """
             Process a publish message from a sensor.
         """
+        
+        # parse
+        try:
+            sensor_type, sensor_id, update = pubsub.sensors.parse(msg)
+        except ValueError as error:
+            log.warning("invalid sensor message: %s", msg)
+            return
 
-        sensor_id = msg['dev_id']
+        sensor_key = '{type}:{id}'.format(type=sensor_type, id=sensor_id)
 
         # maintain sensor state
-        if sensor_id in self.sensors:
-            sensor = self.sensors[sensor_id]
+        if sensor_key in self.sensors:
+            sensor = self.sensors[sensor_key]
         else:
-            sensor = self.sensors[sensor_id] = ServerSensor(self, sensor_id,
-                    logger  = self.loggers.logger(sensor_id),
+            # new sensor
+            sensor = self.sensors[sensor_key] = ServerSensor(self, sensor_type, sensor_id,
+                    logger  = self.loggers.logger(sensor_key),
             )
-            # push new sensor to clients
-            for client in self.clients.values():
-                client.sensor_add(sensor)
             
-            log.info("%s: new sensor", sensor)
-        
-        sensor.recv(msg)
+            log.info("%s: add sensor", sensor)
+
+            self.sensor_add(sensor)
+       
+        assert sensor_key == str(sensor)
+
+        # publish update
+        sensor.update(update, msg)
     
+    def sensor_add (self, sensor):
+        """
+            Handle newly added ServerSensor.
+        """
+        
+        # push new ServerSensor to ServerClients 
+        for client in self.clients.values():
+            client.sensor_add(sensor)
+
     def sensor_clients (self, sensor):
         """
-            Yield all ServerClients subscribed to given sensor.
+            Yield all ServerClients subscribed to given ServerSensor.
         """
 
         for client in self.clients.values():
@@ -211,7 +218,8 @@ class Server (pubsub.udp.Polling):
         """
             
         log.debug("%s: %s", pubsub.udp.addrname(addr), msg)
-
+        
+        # stateful message?
         if msg.seq or msg.ackseq:
             # maintain client state
             if addr in self.clients:
@@ -223,6 +231,7 @@ class Server (pubsub.udp.Polling):
                 )
 
             try:
+                # process in client session
                 client.recv(msg)
             except Exception as ex:
                 # XXX: drop message...
@@ -230,11 +239,10 @@ class Server (pubsub.udp.Polling):
 
         elif msg.type == Message.SUBSCRIBE:
             # stateless query
-            return self.client_subscribe_query(addr, msg.payload)
+            self.client_subscribe_query(addr, msg.payload)
 
         else:
-            log.warning("Message from unknown client %s: %s", addr, msg)
-            return
+            log.warning("Unknown Message from unknown client %s: %s", addr, msg)
 
     def client_subscribe_query (self, addr, sensors=None):
         """
@@ -243,7 +251,6 @@ class Server (pubsub.udp.Polling):
 
         if sensors is not None:
             log.warning("%s: subscribe-query with payload: %s", pubsub.udp.addrname(addr), sensors)
-
 
         sensors = [str(sensor) for sensor in self.sensors.values()]
 
@@ -255,25 +262,27 @@ class Server (pubsub.udp.Polling):
         """
             Mainloop
         """
-
+        
+        # register UDP Sockets to read from
         self.poll_read(self.sensor_port)
         self.poll_read(self.client_port)
-        while True:
 
+        while True:
             try:
                 for socket, msg in self.poll():
                     # process
                     if socket == self.sensor_port:
-                        # Sensors -> dict
+                        # pubsub.sensors.Transport -> dict
                         self.sensor(msg)
 
                     elif socket == self.client_port:
-                        # Transport -> Message
+                        # pubsub.protocol.Transport -> Message
                         self.client(msg, msg.addr)
 
                     else:
-                        log.error("%s: message on unknown socket: %s", socket, msg)
+                        log.error("%s: message on unknown socket: %s", transport, msg)
 
             except pubsub.udp.Timeout as timeout:
+                # TODO: handle sensor/client timeouts
                 pass
 

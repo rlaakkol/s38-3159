@@ -5,6 +5,7 @@
 
 import pubsub.jsonish
 import pubsub.protocol
+import pubsub.sensors
 import pubsub.udp
 
 from pubsub.protocol import Message
@@ -58,6 +59,8 @@ class ClientSession (pubsub.protocol.Session):
     def recv_subscribe (self, sensors):
         """
             Process a subscribe-response/update from server.
+
+            Maintains the subscription set in self.subscription.
         """
         
         log.info("%s", sensors)
@@ -68,14 +71,27 @@ class ClientSession (pubsub.protocol.Session):
     def recv_publish (self, update):
         """
             Process a publish from the server.
+
+            Queues up the (type, int(id), {update}) updates in self.published.
         """
+        
+        if self.magic == 0x42:
+            # XXX: parse old-style update?
+            sensor_type, sensor_id, update = pubsub.sensors.parse(update)
+                
+        elif self.magic == 0x43:
+            # unpack new-style update
+            # XXX: assumes it only contains one update
+            for sensor_key, update in update.items():
+                sensor_type, sensor_id = pubsub.sensors.parse_sensor_key(sensor_key)
+        else:
+            raise Exception("%s: unknown magic for publish syntax: %d" % (self, self.magic, ))
+        
+        log.info("%s:%d: %s", sensor_type, sensor_id, update)
 
-        #update = { update['dev_id']: update['sensor_data'] }
+        # enqueue
+        self.published.append((sensor_type, sensor_id, update))
 
-        log.info("%s", update)
-
-        self.published.append(update)
-    
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
             Message.PUBLISH:    recv_publish,
@@ -135,14 +151,15 @@ class Client (pubsub.udp.Polling):
             Mainloop, yielding recv'd messages.
         """
         
+        # register server Transport for reading
         self.poll_read(self.server)
+
         while True:
             try: 
-                for type, msg in self.poll(self.poll_timeouts()):
-                    # Transport -> Message
-
+                # read pubsub.udp.Sockets
+                for socket, msg in self.poll(self.poll_timeouts()):
                     # XXX: verify sender addr
-                    if type != self.server:
+                    if socket != self.server:
                         log.error("poll on invalid socket: %s", socket)
                         continue
                     
@@ -163,17 +180,25 @@ class Client (pubsub.udp.Polling):
         self.session.send_subscribe(seq=False)
 
         for msg in self:
+            # process messages until we get a subscription back
             if self.session.subscription is not None :
                 return self.session.subscription
 
     def subscribe (self, sensors=True):
         """
-            Setup a subscription, and yield sensor publishes.
+            Setup a subscription, and yield sensor publishes:
+
+                (sensor_type, sensor_id, { update })
+
+            Example:
+
+                ('temp', 1, {'seq_no': 1068, 'ts': 1399929634.02, 'temp': 37.0})
         """
 
         self.session.send_subscribe(sensors)
 
         for msg in self:
+            # consume queue
             for publish in self.session.published :
                 yield publish
 

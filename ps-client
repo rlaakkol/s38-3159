@@ -52,8 +52,8 @@ def main (args):
                 sub = client.subscribe()
 
             # subscribe -> publish
-            for update in sub:
-                print(update)
+            for type, id, update in sub:
+                print("{type}\t{id}\t{value}".format(type=type, id=id, value=update[type]))
 
     except KeyboardInterrupt:
         log.error("exit on KeyboardInterrupt")

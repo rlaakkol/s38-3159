@@ -76,6 +76,14 @@ class ClientSession (pubsub.protocol.Session):
         
         log.info("%s", subscription)
 
+        if self.subscription:
+            # log changes
+            for sensor in set(subscription) - set(self.subscription):
+                log.info("add: %s", sensor)
+            
+            for sensor in set(self.subscription) - set(subscription):
+                log.info("remove: %s", sensor)
+
         # update subscription state
         # XXX: this may also be a subscribe-queryresponse sensor list
         self.subscription = subscription

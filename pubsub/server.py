@@ -68,6 +68,26 @@ class ServerClient (pubsub.protocol.Session):
         self.sensors = dict()
         self.sensors_all = False
 
+    def sensors_state (self):
+        """
+            Return ('sensor:key', 1/0/-1) states for sensors.
+        """
+
+        for sensor_key, subscribed in self.sensors.items():
+            if subscribed and sensor_key in self.server.sensors:
+                # subscribed
+                state = 1
+
+            elif subscribed:
+                # pending
+                state = -1
+
+            else:
+                # not subscribed
+                state = 0
+
+            yield sensor_key, state
+
     def recv_subscribe (self, sensors):
         """
             Process a subscription request from the client.
@@ -96,6 +116,9 @@ class ServerClient (pubsub.protocol.Session):
 
         else:
             log.warning("%s: ignoring invalid subscribe-query payload (%s)" % (self, sensors))
+        
+        # response contains the real list of sensors
+        return dict(self.sensors_state())
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
@@ -119,9 +142,15 @@ class ServerClient (pubsub.protocol.Session):
         """
             Process the addition of a new sensor.
         """
-        # subscribed to all sensors
-        # TODO: send subscribe update
-        self.sensors[str(sensor)] = self.sensors_all
+
+        subscribed = self.sensors.get(str(sensor))
+        
+        if not subscribed:
+            # update subscription state to True if subscribing to all sensors
+            self.sensors[str(sensor)] = self.sensors_all
+        
+        # send subscribe update
+        self.send(Message.SUBSCRIBE, dict(self.sensors_state()))
 
     def send_publish (self, update):
         """

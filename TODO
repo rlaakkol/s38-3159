@@ -1,17 +1,32 @@
 # Specification
 
-* Header magic
-* Header endianness
-* Header flags field
-* Sequence wraparound
-
 # Implementation
+
 ## pubsub.jsonish
 
+## pubsub.protocol
+* Sequence wraparound
+
 ## pubsub.server
-* log sensor data
-* log client messages (XXX: publish only?)
+* sensor timeouts
+** remove sensor from subscriptions if no updates after >60s
+* client aggregation expressions
+** at the minimum, parse them and return -1..
+** ideally implement aggregation logic in ServerClient.sensor_update()
+* client publish ack/noack
+** implement `self.send(Message.PUBLISH, payload, ack=False)` -> `Message(noack=True)`
+** implement `if msg.noack: ...` handling in pubsub.protocol.Session.recv()
+** server timeouts for sending periodic client PUBLISH's with ack=True
+** server timeouts for disconnecting client on missing PUBLISH-ack's
+* teardown support
 
 ## pubsub.client
-* log sensor data from publish messages
-
+* three-way SUBSCRIBE handshake
+** may actually work as-is
+* PUBLISH responses
+** transmit info about received messages..?
+* PUBLISH timeout
+** disconnect if no PUBLISH message for e.g. 1min
+* teardown support
+** intercept KeyboardInterrupt and teardown session..
+** implement pubsub.protocol.Session.teardown()?

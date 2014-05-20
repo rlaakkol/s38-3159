@@ -365,7 +365,7 @@ class TimeoutMonitor(Thread):
         """
             Function executed by the thread.
         """
-        # TODO: what do with sensors which send values irregularly?
+        # XXX: what do with sensors which send values irregularly?
         timeout_sensors = []
         while not self.stopped.wait(self.wait_time):
             # check for sensor timeouts

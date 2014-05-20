@@ -62,6 +62,7 @@ def main (args):
         server()
 
     except KeyboardInterrupt:
+        # stop sensor timeout monitoring thread
         server.monitor.stopped.set()
         log.error("exit on KeyboardInterrupt")
         return 0

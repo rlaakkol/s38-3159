@@ -7,16 +7,16 @@ import pubsub.args
 import pubsub.server
 import pubsub.logger
 
-def read_sensor_file (filename) :
+def read_sensor_file (filename):
     """
         Reads the sensor file and returns the sensors in a list.
     """
     sensors = []
-    try :
-        with open(filename) as senfile :
-            for sensor in senfile.readlines() :
+    try:
+        with open(filename) as senfile:
+            for sensor in senfile.readlines():
                 sensors.append(sensor.strip())
-    except IOError as err :
+    except IOError as err:
         log.error('IO error: %s', err)
         # TODO handle error properly
     return sensors
@@ -58,14 +58,15 @@ def main (args):
     )
     
     # main
-    try :
+    try:
         server()
 
     except KeyboardInterrupt:
+        server.monitor.stopped.set()
         log.error("exit on KeyboardInterrupt")
         return 0
 
-    else :
+    else:
         return 0
 
     finally:

@@ -10,6 +10,8 @@ import pubsub.udp
 from pubsub.protocol import Message
 import time
 
+from threading import Thread, Event
+
 import logging; log = logging.getLogger('pubsub.server')
 
 class ServerSensor:
@@ -29,6 +31,8 @@ class ServerSensor:
         self.type = type
         self.id = id
 
+        self.last_update = None
+
     def update (self, update, msg):
         """
             Process sensor update, updating all clients that may be subscribed.
@@ -44,12 +48,27 @@ class ServerSensor:
         # update clients
         log.info("%s: %s", self, update)
 
+        self.last_update = time.time()
+
         for client in self.server.sensor_clients(self):
             try:
                 client.sensor_update(self, update, msg)
             except Exception as ex:
                 # XXX: drop update...
                 log.exception("ServerClient %s: sensor_update %s:%s", client, self, update)
+
+    def has_timeout(self, timeout):
+        """
+            Checks whether a sensor has timeouted, that is, the last update is 
+            older than 'timeout' seconds. Returns True on timeout, otherwise False.
+
+                timeout:    the timeout value in seconds
+        """
+
+        if self.last_update:
+            if time.time() - self.last_update > timeout:
+                return True
+        return False
         
     def __str__ (self):
         return '{self.type}:{self.id}'.format(self=self)
@@ -94,7 +113,6 @@ class ServerClient (pubsub.protocol.Session):
         """
         
         if sensors is True:
-            # TODO: update on sensor change
             # subscribe to all sensors
             self.sensors = {sensor:True for sensor in self.server.sensors.keys()}
             self.sensors_all = True
@@ -190,6 +208,7 @@ class Server (pubsub.udp.Polling):
         log.info("Listening for client subscribe messages on %s", self.client_port)
 
         self.loggers = loggers
+        self.monitor = TimeoutMonitor(1, self)
 
     def sensor (self, msg):
         """
@@ -300,6 +319,8 @@ class Server (pubsub.udp.Polling):
         """
             Mainloop
         """
+
+        self.monitor.start()
         
         # register UDP Sockets to read from
         self.poll_read(self.sensor_port)
@@ -324,3 +345,37 @@ class Server (pubsub.udp.Polling):
                 # TODO: handle sensor/client timeouts
                 pass
 
+class TimeoutMonitor(Thread):
+    """
+        Sensor timeout monitoring.
+        Inspired by: https://stackoverflow.com/questions/12435211/python-threading-timer-repeat-function-every-n-seconds
+    """
+    def __init__(self, wait_time, server):
+        """
+            wait_time:  how long time to wait between function calls
+            server:     the server instance
+        """
+
+        Thread.__init__(self)
+        self.stopped = Event()
+        self.wait_time = wait_time
+        self.server = server
+
+    def run(self):
+        """
+            Function executed by the thread.
+        """
+        # TODO: what do with sensors which send values irregularly?
+        timeout_sensors = []
+        while not self.stopped.wait(self.wait_time):
+            # check for sensor timeouts
+            for sensor in self.server.sensors:
+                if self.server.sensors[sensor].has_timeout(60):
+                    # mark sensor for deletion
+                    timeout_sensors.append(sensor)
+
+            # remove sensors
+            for sensor in timeout_sensors:
+                del self.server.sensors[sensor]
+                log.warning("%s: removed sensor after timeout" % sensor)
+            timeout_sensors.clear()

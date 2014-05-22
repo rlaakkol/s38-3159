@@ -20,7 +20,7 @@ class ClientSession (pubsub.protocol.Session):
         Outbound state to server.
     """
 
-    def __init__ (self, client, transport, addr, logger=None) :
+    def __init__ (self, client, transport, addr, logger=None):
         pubsub.protocol.Session.__init__(self, transport, addr)
 
         self.client = client
@@ -48,20 +48,24 @@ class ClientSession (pubsub.protocol.Session):
 
         log.info("%s", sensors)
 
-        if sensors is True:
-            # subscribe-request: all
-            subscription = True
-
-        elif sensors:
-            # subscribe-request: [sensor]
-            subscription = list(sensors)
-
-        elif not sensors:
-            # subscribe-query
-            subscription = None
-
+        if isinstance(sensors, dict):
+            # aggregation expression
+            subscription = sensors
         else:
-            raise ValueError(sensors)
+            if sensors is True:
+                # subscribe-request: all
+                subscription = True
+
+            elif sensors:
+                # subscribe-request: [sensor]
+                subscription = list(sensors)
+            
+            elif not sensors:
+                # subscribe-query
+                subscription = None
+
+            else:
+                raise ValueError(sensors)
             
         self.send(Message.SUBSCRIBE, subscription, **opts)
 
@@ -204,7 +208,7 @@ class Client (pubsub.udp.Polling):
 
         for msg in self:
             # process messages until we get a subscription back
-            if self.session.subscription is not None :
+            if self.session.subscription is not None:
                 return self.session.subscription
 
     def subscribe (self, sensors=True):
@@ -222,7 +226,7 @@ class Client (pubsub.udp.Polling):
 
         for msg in self:
             # consume queue
-            for publish in self.session.published :
+            for publish in self.session.published:
                 yield publish
 
             self.session.published = []

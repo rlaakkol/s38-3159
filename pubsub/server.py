@@ -150,11 +150,36 @@ class ServerClient (pubsub.protocol.Session):
         if self.magic == 0x43:
             payload = { str(sensor): update }
 
+            if isinstance(self.sensors[str(sensor)], dict):
+                # aggregation
+                expr = self.sensors[str(sensor)]
+
+                # under and over paramaters
+                if 'under' in expr or 'over' in expr:
+                    # XXX: can both under and over be specified?
+                    if str(sensor).find('temp') > -1:
+                        if 'under' in expr and update['temp'] < float(expr['under']):
+                            self.send_publish(payload)
+                        elif 'over' in expr and update['temp'] > float(expr['over']):
+                            self.send_publish(payload)
+                    elif str(sensor).find('gps') > -1:
+                        type = 'under' if 'under' in expr else 'over'
+                        limit = [float(item) for item in expr[type].split(',')]
+
+                        if 'under' in expr and update['gps'] < limit:
+                            self.send_publish(payload)
+                        elif 'over' in expr and update['gps'] > limit:
+                            self.send_publish(payload)
+                    else:
+                        # unsupported type for under / over expression
+                        self.send_publish(payload)
+            else:
+                self.send_publish(payload)
+
         elif self.magic == 0x42:
             # pass through...
             payload = legacy_msg
-
-        self.send_publish(payload)
+            self.send_publish(payload)
 
     def sensor_add (self, sensor):
         """

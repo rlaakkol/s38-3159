@@ -429,4 +429,3 @@ class Session:
             return pubsub.udp.addrname(self.addr)
         else :
             return self.transport.peername()
-

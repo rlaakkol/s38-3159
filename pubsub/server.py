@@ -87,6 +87,9 @@ class ServerClient (pubsub.protocol.Session):
         self.sensors = dict()
         self.sensors_all = False
 
+        self.executor = None
+        self.sensor_values = []
+
     def sensors_state (self):
         """
             Return ('sensor:key', 1/0/-1) states for sensors.
@@ -128,7 +131,38 @@ class ServerClient (pubsub.protocol.Session):
             self.sensors_all = False
 
         elif isinstance(sensors, dict):
+            # sensor aggregation
             # TODO: parse sensor aggregation
+            for key in sensors.keys():
+                expr = sensors[key]
+            
+            def interval_handler(**opts):
+                """
+                    Performs aggregation specific action at the end of each 
+                    aggregation interval.
+                """
+                
+                server = opts['server']
+                sensor = opts['sensor']
+                expr = opts['expr']
+                
+                if expr['aggregate'] == 'last':
+                    server.send_publish({sensor: server.sensor_values})
+                elif expr['aggregate'] == 'max':
+                    pass
+                elif expr['aggregate'] == 'min':
+                    pass
+                elif expr['aggregate'] == 'avg':
+                    pass
+                elif expr['aggregate'] == 'stddev':
+                    pass
+                server.sensor_values = []
+
+
+            if 'interval' in expr:
+                self.executor = TimedExecutor(expr['interval'], interval_handler, 
+                    server=self, sensor=key, expr=expr)
+                self.executor.start()
             self.sensors = sensors
             self.sensors_all = False
 
@@ -140,7 +174,7 @@ class ServerClient (pubsub.protocol.Session):
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
-    }
+    }  
 
     def sensor_update (self, sensor, update, legacy_msg):
         """
@@ -156,7 +190,6 @@ class ServerClient (pubsub.protocol.Session):
 
                 # under and over paramaters
                 if 'under' in expr or 'over' in expr:
-                    # XXX: can both under and over be specified?
                     if str(sensor).find('temp') > -1:
                         if 'under' in expr and update['temp'] < float(expr['under']):
                             self.send_publish(payload)
@@ -171,8 +204,10 @@ class ServerClient (pubsub.protocol.Session):
                         elif 'over' in expr and update['gps'] > limit:
                             self.send_publish(payload)
                     else:
-                        # unsupported type for under / over expression
+                        # unsupported sensor type for under / over expression
                         self.send_publish(payload)
+                elif 'interval' in expr:
+                    self.sensor_values.append(update)
             else:
                 self.send_publish(payload)
 
@@ -403,4 +438,30 @@ class TimeoutMonitor(Thread):
             for sensor in timeout_sensors:
                 del self.server.sensors[sensor]
                 log.warning("%s: removed sensor after timeout" % sensor)
-            timeout_sensors.clear()
+            timeout_sensors = []
+
+class TimedExecutor(Thread):
+    """
+        Calls a function repeatedly after a specific time.
+        Inspired by: https://stackoverflow.com/questions/12435211/python-threading-timer-repeat-function-every-n-seconds
+    """
+    def __init__(self, wait_time, func, **kwargs):
+        """
+            wait_time:  how many seconds to wait between function calls
+            server:     the server instance
+            func:       the function to be called
+            kwargs:     keyword arguments to the function
+        """
+
+        Thread.__init__(self)
+        self.stopped = Event()
+        self.wait_time = wait_time
+        self.func = func
+        self.kwargs = kwargs
+
+    def run(self):
+        """
+            Function executed by the thread.
+        """
+        while not self.stopped.wait(self.wait_time):
+            self.func(**self.kwargs)

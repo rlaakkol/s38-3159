@@ -116,6 +116,7 @@ class ClientSession (pubsub.protocol.Session):
         # enqueue
         self.published.append((sensor_type, sensor_id, update))
 
+
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
             Message.PUBLISH:    recv_publish,
@@ -168,7 +169,7 @@ class Client (pubsub.udp.Polling):
             if sendtime:
                 timeout = sendtime + self.SEND_TIMEOUT[type]
 
-                yield type, timeout
+                yield type, timeout, None
 
     def __iter__ (self):
         """

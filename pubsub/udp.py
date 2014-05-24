@@ -182,13 +182,15 @@ class Polling:
 
         poll_timer = None
         poll_timeout = None
+        poll_client = None
         
         if timeouts:
             # select shortest timeout
-            for timer, timeout in timeouts:
+            for timer, timeout, client in timeouts:
                 if not poll_timeout or timeout < poll_timeout:
                     poll_timer = timer
                     poll_timeout = timeout
+                    poll_client = client
 
         if poll_timeout:
             timeout = (poll_timeout - time.time()) * 1000
@@ -220,11 +222,12 @@ class Polling:
             log.debug("%s: timeout", poll_timer)
 
             # timeout
-            raise Timeout(poll_timer)
+            raise Timeout(poll_timer, client)
 
 class Timeout(Exception):
-    def __init__(self, value):
+    def __init__(self, value, client=None):
         self.timer = value
+        self.client = client
 
     def __str__(self):
         return repr(self.timer)

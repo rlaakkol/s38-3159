@@ -33,6 +33,7 @@ class ServerSensor:
 
         self.last_update = None
 
+
     def update (self, update, msg):
         """
             Process sensor update, updating all clients that may be subscribed.
@@ -87,6 +88,9 @@ class ServerClient (pubsub.protocol.Session):
         self.sensors = dict()
         self.sensors_all = False
 
+        self.missed_pubacks = 0
+
+
     def sensors_state (self):
         """
             Return ('sensor:key', 1/0/-1) states for sensors.
@@ -137,6 +141,7 @@ class ServerClient (pubsub.protocol.Session):
         
         # response contains the real list of sensors
         return dict(self.sensors_state())
+
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
@@ -195,12 +200,13 @@ class ServerClient (pubsub.protocol.Session):
         # send subscribe update
         self.send(Message.SUBSCRIBE, dict(self.sensors_state()))
 
-    def send_publish (self, update):
+    def send_publish (self, update, noack=1):
         """
             Send a publish message for the given sensor update.
         """
 
-        self.send(Message.PUBLISH, update)
+        self.send(Message.PUBLISH, update, noack=noack)
+
     
     def send (self, *args, **opts):
         """
@@ -234,6 +240,10 @@ class Server (pubsub.udp.Polling):
 
         self.loggers = loggers
         self.monitor = TimeoutMonitor(1, self)
+
+    SEND_TIMEOUT = {
+            Message.PUBLISH:          3.0,
+    }
 
     def sensor (self, msg):
         """
@@ -340,6 +350,18 @@ class Server (pubsub.udp.Polling):
 
         return sensors
 
+    def poll_timeouts (self):
+        """
+            Collect timeouts for polling.
+        """
+
+        for client in self.clients:
+            for type, sendtime in client.session.sendtime.items():
+                if sendtime:
+                    timeout = sendtime + self.SEND_TIMEOUT[type]
+
+                    yield type, timeout, client
+
     def __call__ (self):
         """
             Mainloop
@@ -353,7 +375,7 @@ class Server (pubsub.udp.Polling):
 
         while True:
             try:
-                for socket, msg in self.poll():
+                for socket, msg in self.poll(self.poll_timeouts()):
                     # process
                     if socket == self.sensor_port:
                         # pubsub.sensors.Transport -> dict
@@ -368,7 +390,9 @@ class Server (pubsub.udp.Polling):
 
             except pubsub.udp.Timeout as timeout:
                 # TODO: handle sensor/client timeouts
-                pass
+                if timeout.timer == Message.PUBLISH:
+                    timeout.client.missed_pubacks += 1
+                    timeout.client.session.send_publish(timeout.timer, None, noack=0)
 
 class TimeoutMonitor(Thread):
     """

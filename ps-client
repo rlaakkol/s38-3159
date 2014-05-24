@@ -41,8 +41,12 @@ def main (args):
 
     # validate aggregation arguments
     if not args.aggregate and args.step:
-        print('Error: -S/--step can only be used when the -a/--aggregate option' \
-            ' is provided', file=sys.stderr)
+        print('Error: the -S/--step argument can only be used when the ' \
+            '-a/--aggregate argument is provided', file=sys.stderr)
+        return 0
+    if args.aggregate and not args.interval:
+        print('Error: the -a/--aggregate argument cannot be used without '\
+            'the -i/--interval argument', file=sys.stderr)
         return 0
     
     pubsub.args.apply(args)
@@ -83,9 +87,16 @@ def main (args):
                 sub = client.subscribe()
 
             # subscribe -> publish
-            for type, id, update in sub:
-                print("{type}\t{id}\t{value}".format(type=type, id=id, value=update[type]))
-
+            for s_type, id, update in sub:
+                if isinstance(update, dict):
+                    # single update
+                    print("{s_type}\t{id}\t{value}".format(s_type=s_type, id=id, 
+                        value=update[s_type]))
+                elif isinstance(update, list):
+                    # aggregation update
+                    for upd in update:
+                        print("{s_type}\t{id}\t{value}".format(s_type=s_type, 
+                            id=id, value=upd[s_type]))
     except KeyboardInterrupt:
         log.error("exit on KeyboardInterrupt")
         return 0

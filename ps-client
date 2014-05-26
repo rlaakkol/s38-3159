@@ -24,7 +24,9 @@ def main (args):
     parser.add_argument('-L', '--list', action='store_true',
             help="Query for available sensors")
     parser.add_argument('-a', '--aggregate', metavar='AGGREGATE',
-            help="The type of aggregation to use")
+            help="The type of aggregation to use. Supported types per sensor: " \
+            "last: asd, device, gps, temp; max: gps, temp; min: gps, temp; " \
+            "avg: gps,temp; stddev: gps,temp")
     parser.add_argument('-i', '--interval', metavar='INTERVAL', type=int,
             help="Aggregation interval")
     parser.add_argument('-S', '--step', metavar='STEP', type=int, 
@@ -40,6 +42,12 @@ def main (args):
     args = parser.parse_args(args)
 
     # validate aggregation arguments
+    if args.aggregate and args.aggregate not in \
+        ['last', 'max', 'min', 'avg', 'stddev']:
+        print('Error: the entered aggregation method is not defined. The ' \
+        'following methods are available: last, max, min, avg, stddev', 
+         file=sys.stderr)
+        return 0
     if not args.aggregate and args.step:
         print('Error: the -S/--step argument can only be used when the ' \
             '-a/--aggregate argument is provided', file=sys.stderr)

@@ -9,6 +9,7 @@ import pubsub.udp
 
 from pubsub.protocol import Message
 import time
+import numpy
 
 from threading import Thread, Event
 
@@ -145,19 +146,27 @@ class ServerClient (pubsub.protocol.Session):
                 server = opts['server']
                 sensor = opts['sensor']
                 expr = opts['expr']
+                values = []
                 
                 if expr['aggregate'] == 'last':
                     server.send_publish({sensor: server.sensor_values})
-                elif expr['aggregate'] == 'max':
-                    pass
-                elif expr['aggregate'] == 'min':
-                    pass
-                elif expr['aggregate'] == 'avg':
-                    pass
-                elif expr['aggregate'] == 'stddev':
-                    pass
-                server.sensor_values = []
+                if sensor.find('temp') > -1 or sensor.find('gps') > -1:
+                    key = 'temp' if sensor.find('temp') > -1 else 'gps'
+                    values = [value[key] for value in server.sensor_values]
+                    if not values:
+                        return
 
+                    if expr['aggregate'] == 'max':
+                        aggregate = max(values)
+                    elif expr['aggregate'] == 'min':
+                        aggregate = min(values)
+                    elif expr['aggregate'] == 'avg':
+                        aggregate = list(numpy.mean(values, axis=0))
+                    elif expr['aggregate'] == 'stddev':
+                        aggregate = list(numpy.std(values, axis=0))
+                    server.send_publish({sensor: [{key: aggregate, 'ts': time.time()}]})
+
+                server.sensor_values = []
 
             if 'interval' in expr:
                 self.executor = TimedExecutor(expr['interval'], interval_handler, 

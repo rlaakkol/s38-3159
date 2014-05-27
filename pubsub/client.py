@@ -12,8 +12,11 @@ from pubsub.protocol import Message
 from pubsub.logger import Logger
 
 import time # XXX: logging
+import sys
 import logging; log = logging.getLogger('pubsub.client')
 from os import getpid
+
+MAX_PUBLISH_INTERVAL = 5.0
 
 class ClientSession (pubsub.protocol.Session):
     """
@@ -31,6 +34,8 @@ class ClientSession (pubsub.protocol.Session):
         
         # queued up publishes
         self.published = []
+
+        self.last_publish = time.time()
 
     def query_subscribe (self):
         """
@@ -98,7 +103,8 @@ class ClientSession (pubsub.protocol.Session):
 
             Queues up the (type, int(id), {update}) updates in self.published.
         """
-        
+        self.last_publish = time.time()
+
         if self.magic == 0x42:
             # XXX: parse old-style update?
             sensor_type, sensor_id, update = pubsub.sensors.parse(update)
@@ -106,8 +112,12 @@ class ClientSession (pubsub.protocol.Session):
         elif self.magic == 0x43:
             # unpack new-style update
             # XXX: assumes it only contains one update
-            for sensor_key, update in update.items():
-                sensor_type, sensor_id = pubsub.sensors.parse_sensor_key(sensor_key)
+            if update:
+                for sensor_key, update in update.items():
+                    sensor_type, sensor_id = pubsub.sensors.parse_sensor_key(sensor_key)
+            else:
+                sensor_type = None
+                sensor_id = None
         else:
             raise Exception("%s: unknown magic for publish syntax: %d" % (self, self.magic, ))
         
@@ -168,7 +178,9 @@ class Client (pubsub.udp.Polling):
             if sendtime:
                 timeout = sendtime + self.SEND_TIMEOUT[type]
 
-                yield type, timeout
+                yield type, timeout, None
+
+        yield Message.PUBLISH, self.session.last_publish + MAX_PUBLISH_INTERVAL, None
 
     def __iter__ (self):
         """
@@ -194,7 +206,12 @@ class Client (pubsub.udp.Polling):
 
             except pubsub.udp.Timeout as timeout:
                 # timeout
-                self.session.retry(timeout.timer)
+                if timeout.timer == Message.PUBLISH:
+                    # Server timed out
+                    log.error("Server timed out")
+                    sys.exit(-1)
+                else:
+                    self.session.retry(timeout.timer)
 
     def query (self):
         """

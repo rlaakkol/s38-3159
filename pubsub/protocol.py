@@ -282,8 +282,16 @@ class Session:
         recvseq = self.recvseq[msg.type]
         
         if not msg.seq and msg.ackseq:
-            # payloadless ack
-            pass
+            # payloadless 
+            if msg.type == Message.PUBLISH:
+                try:
+                    handler = self.RECV[msg.type]
+                except KeyError :
+                    log.warning("%s: unknown message type: %s", self, msg)
+                    return
+
+                handler(self)
+
 
         elif msg.seq and msg.seq < recvseq:
             log.warning("%s: drop duplicate %s:%d < %d", self, msg.type_str, msg.seq, recvseq)
@@ -339,7 +347,8 @@ class Session:
                     # ack
                     log.info("%s: %s:%d:%s -> *", self, msg.type_str, msg.seq, msg.payload)
 
-                self.transport(ack, addr=self.addr)
+                if not msg.noack:
+                    self.transport(ack, addr=self.addr)
 
     def query (self, type, payload=None, **opts):
         """
@@ -368,7 +377,7 @@ class Session:
 
         return msg
 
-    def send (self, type, payload=None, **opts):
+    def send (self, type, payload=None, noack=False, timeout=True, **opts):
         """
             Build a new request Message and send it to the peer.
 
@@ -387,6 +396,7 @@ class Session:
                 magic   = self.magic,
                 seq     = seq,
                 payload = payload,
+                noack   = noack,
                 **opts
         )
 
@@ -394,10 +404,10 @@ class Session:
         log.info("%s: %s", self, msg)
         
         self.transport(msg, self.addr)
-        
-        # update state for timeout/retry
-        self.sendtime[type] = time.time()
-        self.sendpayload[type] = payload
+        if timeout:
+            # update state for timeout/retry
+            self.sendtime[type] = time.time()
+            self.sendpayload[type] = payload
 
         return msg
 

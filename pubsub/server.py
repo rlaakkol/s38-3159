@@ -15,6 +15,10 @@ from threading import Thread, Event
 
 import logging; log = logging.getLogger('pubsub.server')
 
+MIN_PUBACK_TIMEOUT = 3.0
+MAX_PUBACK_TIMEOUT = 4.0
+MAX_MISSED_ACKS = 2
+
 class ServerSensor:
     """
         Server per-sensor state
@@ -90,6 +94,11 @@ class ServerClient (pubsub.protocol.Session):
 
         self.executor = None
         self.sensor_values = []
+
+        self.last_ackreq = 0
+        self.ack_pending = True
+        self.missed_acks = 0
+        self.timedout = False
 
     def sensors_state (self):
         """
@@ -229,9 +238,6 @@ class ServerClient (pubsub.protocol.Session):
         # response contains the real list of sensors
         return dict(self.sensors_state())
 
-    RECV = {
-            Message.SUBSCRIBE:  recv_subscribe,
-    }
 
     def check_under_over (self, under, over, values, type):
         """
@@ -339,12 +345,28 @@ class ServerClient (pubsub.protocol.Session):
         # send subscribe update
         self.send(Message.SUBSCRIBE, dict(self.sensors_state()))
 
-    def send_publish (self, update):
+    def send_publish (self, update, timeout=False):
         """
             Send a publish message for the given sensor update.
         """
 
-        self.send(Message.PUBLISH, update)
+        now = time.time()
+
+        if timeout or now - self.last_ackreq > MIN_PUBACK_TIMEOUT:
+            if self.ack_pending:
+                if self.missed_acks > MAX_MISSED_ACKS:
+                    self.timedout = True
+                self.missed_acks += 1
+            self.send(Message.PUBLISH, timeout=False, payload=update)
+            self.last_ackreq = now
+            self.ack_pending = True
+        else:
+            self.send(Message.PUBLISH, timeout=False, noack=True, payload=update)
+
+    def handle_ack (self):
+ #       log.info("Ack from client %s", self)
+        self.ack_pending = False
+        self.missed_acks = 0
     
     def send (self, *args, **opts):
         """
@@ -355,6 +377,16 @@ class ServerClient (pubsub.protocol.Session):
 
         if self.logger:
             self.logger.log(time.time(), str(msg))
+
+    RECV = {
+            Message.SUBSCRIBE:  recv_subscribe,
+            Message.PUBLISH:    handle_ack,
+    }
+
+    SEND_TIMEOUT = {
+            Message.SUBSCRIBE: 10.0
+    }
+
 
 class Server (pubsub.udp.Polling):
     """
@@ -484,6 +516,19 @@ class Server (pubsub.udp.Polling):
 
         return sensors
 
+    def poll_timeouts (self):
+        """
+            Collect timeouts for polling.
+        """
+        for addr, client in self.clients.items():
+            for type, sendtime in client.sendtime.items():
+                if sendtime:
+                    timeout = sendtime + client.SEND_TIMEOUT[type]
+
+                    yield type, timeout, None
+            if not client.ack_pending:
+                yield Message.PUBLISH, client.last_ackreq + MAX_PUBACK_TIMEOUT, client
+
     def __call__ (self):
         """
             Main loop
@@ -495,9 +540,23 @@ class Server (pubsub.udp.Polling):
         self.poll_read(self.sensor_port)
         self.poll_read(self.client_port)
 
+        client = None
+        remove = False
+
         while True:
             try:
-                for socket, msg in self.poll():
+                # Look foor clients that have timed out
+                for key, client in self.clients.items():
+                    if client.timedout:
+                        remove = True
+                        break
+                if remove:
+                    # Remove first timed out
+                    log.warning("%s: removed client after timeout", client)
+                    del self.clients[key]
+                    remove = False
+
+                for socket, msg in self.poll(self.poll_timeouts()):
                     # process
                     if socket == self.sensor_port:
                         # pubsub.sensors.Transport -> dict
@@ -511,8 +570,13 @@ class Server (pubsub.udp.Polling):
                         log.error("%s: message on unknown socket: %s", transport, msg)
 
             except pubsub.udp.Timeout as timeout:
+                log.info("Publish timed out %s: %s", timeout.timer, timeout.session)
                 # TODO: handle sensor/client timeouts
-                pass
+                if timeout.timer == Message.PUBLISH:
+
+                    timeout.session.send_publish(None, timeout=True)
+
+
 
 class TimeoutMonitor(Thread):
     """

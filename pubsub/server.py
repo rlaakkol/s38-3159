@@ -377,7 +377,7 @@ class Server (pubsub.udp.Polling):
         log.info("Listening for client subscribe messages on %s", self.client_port)
 
         self.loggers = loggers
-        self.monitor = TimeoutMonitor(1, self)
+        self.timeouts = []
 
     def sensor (self, msg):
         """
@@ -416,6 +416,7 @@ class Server (pubsub.udp.Polling):
             Handle newly added ServerSensor.
         """
         
+        self.timeouts.append(str(sensor))
         # push new ServerSensor to ServerClients 
         for client in self.clients.values():
             client.sensor_add(sensor)
@@ -484,12 +485,18 @@ class Server (pubsub.udp.Polling):
 
         return sensors
 
+    def poll_timeouts (self):
+        """
+            Collects timeouts for polling.
+        """
+
+        for sensor in self.timeouts:
+            yield sensor, time.time() + 60
+
     def __call__ (self):
         """
             Main loop
         """
-
-        self.monitor.start()
         
         # register UDP Sockets to read from
         self.poll_read(self.sensor_port)
@@ -497,7 +504,7 @@ class Server (pubsub.udp.Polling):
 
         while True:
             try:
-                for socket, msg in self.poll():
+                for socket, msg in self.poll(self.poll_timeouts()):
                     # process
                     if socket == self.sensor_port:
                         # pubsub.sensors.Transport -> dict
@@ -512,42 +519,17 @@ class Server (pubsub.udp.Polling):
 
             except pubsub.udp.Timeout as timeout:
                 # TODO: handle sensor/client timeouts
-                pass
 
-class TimeoutMonitor(Thread):
-    """
-        Sensor timeout monitoring.
-        Inspired by: https://stackoverflow.com/questions/12435211/python-threading-timer-repeat-function-every-n-seconds
-    """
-    def __init__(self, wait_time, server):
-        """
-            wait_time:  how long time to wait between function calls
-            server:     the server instance
-        """
-
-        Thread.__init__(self)
-        self.stopped = Event()
-        self.wait_time = wait_time
-        self.server = server
-
-    def run(self):
-        """
-            Function executed by the thread.
-        """
-        # XXX: what do with sensors which send values irregularly?
-        timeout_sensors = []
-        while not self.stopped.wait(self.wait_time):
-            # check for sensor timeouts
-            for sensor in self.server.sensors:
-                if self.server.sensors[sensor].has_timeout(60):
-                    # mark sensor for deletion
-                    timeout_sensors.append(sensor)
-
-            # remove sensors
-            for sensor in timeout_sensors:
-                del self.server.sensors[sensor]
-                log.warning("%s: removed sensor after timeout" % sensor)
-            timeout_sensors = []
+                # handle sensor timeouts
+                timeout_sensors = []
+                for sensor in self.sensors:
+                    if str(sensor) == str(timeout).strip("'"):
+                        timeout_sensors.append(sensor)
+                # remove timeouted sensors
+                for sensor in timeout_sensors:
+                    log.warning("%s: removed sensor after timeout" % sensor)
+                    del self.timeouts[self.timeouts.index(str(sensor))]
+                    del self.sensors[sensor]
 
 class TimedExecutor(Thread):
     """

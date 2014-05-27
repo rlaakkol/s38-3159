@@ -48,6 +48,10 @@ def main (args):
         print('Error: the -a/--aggregate argument cannot be used without '\
             'the -i/--interval argument', file=sys.stderr)
         return 0
+    if args.interval and args.step and (args.interval % args.step != 0):
+        print('Error: the interval value must be evenly dividable by the step ' \
+            'value', file=sys.stderr)
+        return 0
     
     pubsub.args.apply(args)
     loggers = pubsub.logger.apply(args)

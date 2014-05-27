@@ -9,7 +9,7 @@ import pubsub.udp
 
 from pubsub.protocol import Message
 import time
-import numpy
+import numpy as np
 
 from threading import Thread, Event
 
@@ -133,11 +133,10 @@ class ServerClient (pubsub.protocol.Session):
 
         elif isinstance(sensors, dict):
             # sensor aggregation
-            # TODO: parse sensor aggregation
             for key in sensors.keys():
                 expr = sensors[key]
             
-            def interval_handler(**opts):
+            def interval_handler (**opts):
                 """
                     Performs aggregation specific action at the end of each 
                     aggregation interval.
@@ -147,25 +146,74 @@ class ServerClient (pubsub.protocol.Session):
                 sensor = opts['sensor']
                 expr = opts['expr']
                 values = []
-                
+                key = 'temp' if sensor.find('temp') > -1 else 'gps'
+                under = expr['under'] if 'under' in expr else None
+                over = expr['over'] if 'over' in expr else None
+
                 if expr['aggregate'] == 'last':
-                    server.send_publish({sensor: server.sensor_values})
-                if sensor.find('temp') > -1 or sensor.find('gps') > -1:
-                    key = 'temp' if sensor.find('temp') > -1 else 'gps'
+                    ok_values = self.check_under_over(under, over,
+                        server.sensor_values, key)
+                    if ok_values:
+                        server.send_publish({sensor: ok_values})
+                elif sensor.find('temp') > -1 or sensor.find('gps') > -1:
                     values = [value[key] for value in server.sensor_values]
                     if not values:
+                        # no sensor updates received
                         return
 
-                    if expr['aggregate'] == 'max':
-                        aggregate = max(values)
-                    elif expr['aggregate'] == 'min':
-                        aggregate = min(values)
-                    elif expr['aggregate'] == 'avg':
-                        aggregate = list(numpy.mean(values, axis=0))
-                    elif expr['aggregate'] == 'stddev':
-                        aggregate = list(numpy.std(values, axis=0))
-                    server.send_publish({sensor: [{key: aggregate, 'ts': time.time()}]})
+                    if 'step' in expr:
+                        # step provided
+                        step_values = []
+                        send_values = []
+                        no_split = False
+                        values_per_step = \
+                            np.floor(expr['interval'] / expr['step'])
+                        if len(values) > values_per_step:
+                            splits = np.array_split(values, values_per_step)
+                        else:
+                            no_split = True
 
+                        if no_split:
+                            if expr['aggregate'] == 'max':
+                                step_values = max(values)
+                            elif expr['aggregate'] == 'min':
+                                step_values = min(values)
+                            elif expr['aggregate'] == 'avg':
+                                step_values = np.mean(values, axis=0)
+                            elif expr['aggregate'] == 'stddev':
+                                step_values = np.std(values, axis=0)
+                            send_values = {key: list(step_values), 'ts': time.time()}
+                        else:
+                            if expr['aggregate'] == 'max':
+                                step_values = [max(list(split)) for split in splits]
+                            elif expr['aggregate'] == 'min':
+                                step_values = [min(list(split)) for split in splits]
+                            elif expr['aggregate'] == 'avg':
+                                step_values = [np.mean(split, axis=0)
+                                    for split in splits]
+                            elif expr['aggregate'] == 'stddev':
+                                step_values = [np.std(split, axis=0)
+                                    for split in splits]
+                            send_values = [{key: value, 'ts': time.time()}
+                                for value in step_values]
+                        ok_values = self.check_under_over(under, over,
+                            send_values, key)
+                        if ok_values:
+                            server.send_publish({sensor: ok_values})
+                    else:
+                        if expr['aggregate'] == 'max':
+                            aggregate = max(values)
+                        elif expr['aggregate'] == 'min':
+                            aggregate = min(values)
+                        elif expr['aggregate'] == 'avg':
+                            aggregate = np.mean(values, axis=0)
+                        elif expr['aggregate'] == 'stddev':
+                            aggregate = np.std(values, axis=0)
+
+                        if self.check_under_over(under, over, {key: aggregate},
+                            key):
+                            server.send_publish( {sensor: [ {key: aggregate,
+                                'ts': time.time()} ]} )
                 server.sensor_values = []
 
             if 'interval' in expr:
@@ -183,7 +231,68 @@ class ServerClient (pubsub.protocol.Session):
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
-    }  
+    }
+
+    def check_under_over (self, under, over, values, type):
+        """
+            Checks whether given value(s) (dict or list) fulfills the 'under'
+            and 'over' constraints. Returns the conforming value(s) and an empty
+            list otherwise.
+
+            under  - under constraint
+            over   - over constraint
+            values - value(s) to check
+            type   - type of sensor
+        """
+
+        passed_values = []
+        # parse constraints
+        try:
+            if under:
+                under = float(under)
+            if over:
+                over = float(over)
+        except ValueError:
+            # list because cast failed
+            if under:
+                under = [float(item) for item in under.split(',')]
+            if over:
+                over = [float(item) for item in over.split(',')]
+
+        if isinstance(values, dict):
+            # single dict
+            if under and not over:
+                # under
+                if values[type] < under:
+                    return values
+            elif over and not under:
+                # over
+                if values[type] > over:
+                    return values
+            elif under and over:
+                # both
+                if values[type] < under and values[type] > over:
+                    return values
+        elif isinstance(values, list):
+            # multiple dicts
+            for val in values:
+                if under and not over:
+                    # under
+                    if val[type] < under:
+                        passed_values.append(val)
+                elif over and not under:
+                    # over
+                    if val[type] > over:
+                        passed_values.append(val)
+                elif under and over:
+                    # both
+                    if val[type] < under and val[type] > over:
+                        passed_values.append(val)
+        if not under and not over:
+            # pass-through if there are no constraints
+            return values
+        else:
+            return passed_values
 
     def sensor_update (self, sensor, update, legacy_msg):
         """
@@ -197,23 +306,14 @@ class ServerClient (pubsub.protocol.Session):
                 # aggregation
                 expr = self.sensors[str(sensor)]
 
-                # under and over paramaters
-                if 'under' in expr or 'over' in expr:
-                    if str(sensor).find('temp') > -1:
-                        if 'under' in expr and update['temp'] < float(expr['under']):
-                            self.send_publish(payload)
-                        elif 'over' in expr and update['temp'] > float(expr['over']):
-                            self.send_publish(payload)
-                    elif str(sensor).find('gps') > -1:
-                        type = 'under' if 'under' in expr else 'over'
-                        limit = [float(item) for item in expr[type].split(',')]
-
-                        if 'under' in expr and update['gps'] < limit:
-                            self.send_publish(payload)
-                        elif 'over' in expr and update['gps'] > limit:
-                            self.send_publish(payload)
-                    else:
-                        # unsupported sensor type for under / over expression
+                # under and over parameters
+                sensor_type = 'temp' if str(sensor).find('temp') > -1 else 'gps'
+                if ('under' in expr or 'over' in expr) and 'aggregate' not in expr:
+                    if self.check_under_over(
+                        expr['under'] if 'under' in expr else None,
+                        expr['over'] if 'over' in expr else None,
+                        update, 
+                        sensor_type):
                         self.send_publish(payload)
                 elif 'interval' in expr:
                     self.sensor_values.append(update)
@@ -386,7 +486,7 @@ class Server (pubsub.udp.Polling):
 
     def __call__ (self):
         """
-            Mainloop
+            Main loop
         """
 
         self.monitor.start()

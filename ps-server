@@ -62,8 +62,6 @@ def main (args):
         server()
 
     except KeyboardInterrupt:
-        # stop sensor timeout monitoring thread
-        server.monitor.stopped.set()
         for client in server.clients.values():
             if client.executor:
                 client.executor.stopped.set()

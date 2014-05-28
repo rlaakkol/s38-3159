@@ -505,15 +505,8 @@ class Server (pubsub.udp.Polling):
                 # XXX: drop message...
                 log.exception("ServerClient %s: %s", pubsub.udp.addrname(addr), msg)
         elif msg.type == Message.TEARDOWN:
-            if addr in self.clients:
-                # send teardown-ack
-                client = self.clients[addr]
-                client.send(Message.TEARDOWN, ackseq=1)
-                client.timedout = True
-            else:
-                # unknown client
-                # TODO: send teardown-ack
-                pass
+            # TODO: Teardown from unknown client
+            pass
 
         else:
             log.warning("Unknown Message from unknown client %s: %s", addr, msg)

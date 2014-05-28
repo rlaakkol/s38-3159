@@ -465,7 +465,7 @@ class Server (pubsub.udp.Polling):
         """
 
         for client in self.clients.values():
-            if str(sensor) in client.sensors:
+            if client.sensors.get(str(sensor)):
                 yield client
 
     def client (self, msg, addr):

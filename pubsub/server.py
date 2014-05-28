@@ -95,8 +95,8 @@ class ServerClient (pubsub.protocol.Session):
         self.executor = None
         self.sensor_values = []
 
-        self.last_ackreq = 0
-        self.ack_pending = True
+        self.last_ackreq = time.time()
+        self.ack_pending = False
         self.missed_acks = 0
         self.timedout = False
         self.torndown = False

@@ -86,6 +86,8 @@ def main (args):
                         aggr['aggregate'] = args.aggregate
                     if args.interval:
                         aggr['interval'] = args.interval
+                        # adjust publish interval to stop erroneous server timeouts
+                        client.session.MAX_PUBLISH_INTERVAL = args.interval
                     if args.step:
                         aggr['step'] = args.step
                     if args.under:

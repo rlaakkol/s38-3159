@@ -16,8 +16,6 @@ import sys
 import logging; log = logging.getLogger('pubsub.client')
 from os import getpid
 
-MAX_PUBLISH_INTERVAL = 5.0
-
 class ClientSession (pubsub.protocol.Session):
     """
         Outbound state to server.
@@ -36,6 +34,7 @@ class ClientSession (pubsub.protocol.Session):
         self.published = []
 
         self.last_publish = time.time()
+        self.MAX_PUBLISH_INTERVAL = 5.0
 
     def query_subscribe (self):
         """
@@ -180,7 +179,8 @@ class Client (pubsub.udp.Polling):
 
                 yield type, timeout, None
 
-        yield Message.PUBLISH, self.session.last_publish + MAX_PUBLISH_INTERVAL, None
+        yield Message.PUBLISH, self.session.last_publish + \
+            self.session.MAX_PUBLISH_INTERVAL, None
 
     def __iter__ (self):
         """

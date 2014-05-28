@@ -129,7 +129,6 @@ class ClientSession (pubsub.protocol.Session):
         """
             Process a teardown-ack from the server.
         """
-        print('ackseq:%d,seq:%d' % (response.ackseq, response.seq))
          # TODO exit
         log.info('Closing client')
         sys.exit(0)

@@ -99,6 +99,7 @@ class ServerClient (pubsub.protocol.Session):
         self.ack_pending = True
         self.missed_acks = 0
         self.timedout = False
+        self.torndown = False
 
     def sensors_state (self):
         """
@@ -367,6 +368,10 @@ class ServerClient (pubsub.protocol.Session):
  #       log.info("Ack from client %s", self)
         self.ack_pending = False
         self.missed_acks = 0
+
+    def handle_teardown (self, payload):
+        self.torndown = True
+        self.send(Message.TEARDOWN, ackseq=1)
     
     def send (self, *args, **opts):
         """
@@ -381,6 +386,7 @@ class ServerClient (pubsub.protocol.Session):
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
             Message.PUBLISH:    handle_ack,
+            Message.TEARDOWN:   handle_teardown,
     }
 
     SEND_TIMEOUT = {
@@ -498,6 +504,16 @@ class Server (pubsub.udp.Polling):
             except Exception as ex:
                 # XXX: drop message...
                 log.exception("ServerClient %s: %s", pubsub.udp.addrname(addr), msg)
+        elif msg.type == Message.TEARDOWN:
+            if addr in self.clients:
+                # send teardown-ack
+                client = self.clients[addr]
+                client.send(Message.TEARDOWN, ackseq=1)
+                client.timedout = True
+            else:
+                # unknown client
+                # TODO: send teardown-ack
+                pass
 
         else:
             log.warning("Unknown Message from unknown client %s: %s", addr, msg)
@@ -547,16 +563,22 @@ class Server (pubsub.udp.Polling):
 
         while True:
             try:
-                # Look foor clients that have timed out
-                for key, client in self.clients.items():
-                    if client.timedout:
-                        remove = True
+                # Look foor clients that have timed out (also torn down clients have timedout == True)
+                while True:
+                    for key, client in self.clients.items():
+                        if client.timedout or client.torndown:
+                            remove = True
+                            break
+                    if remove:
+                        # Remove timed out
+                        if client.timedout:
+                            log.warning("%s: removed client after timeout", client)
+                        if client.torndown:
+                            log.info("%s: removed client after teardown", client)                            
+                        del self.clients[key]
+                        remove = False
+                    else:
                         break
-                if remove:
-                    # Remove first timed out
-                    log.warning("%s: removed client after timeout", client)
-                    del self.clients[key]
-                    remove = False
 
                 for socket, msg in self.poll(self.poll_timeouts()):
                     # process

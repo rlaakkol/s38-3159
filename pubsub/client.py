@@ -125,9 +125,19 @@ class ClientSession (pubsub.protocol.Session):
         # enqueue
         self.published.append((sensor_type, sensor_id, update))
 
+    def recv_teardown (self, response):
+        """
+            Process a teardown-ack from the server.
+        """
+        print('ackseq:%d,seq:%d' % (response.ackseq, response.seq))
+         # TODO exit
+        log.info('Closing client')
+        sys.exit(0)
+
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
             Message.PUBLISH:    recv_publish,
+            Message.TEARDOWN:   recv_teardown
     }
 
 class Client (pubsub.udp.Polling):
@@ -191,7 +201,7 @@ class Client (pubsub.udp.Polling):
         self.poll_read(self.server)
 
         while True:
-            try: 
+            try:
                 # read pubsub.udp.Sockets
                 for socket, msg in self.poll(self.poll_timeouts()):
                     # XXX: verify sender addr
@@ -247,6 +257,32 @@ class Client (pubsub.udp.Polling):
                 yield publish
 
             self.session.published = []
+
+    def teardown (self):
+        """
+            Send teardown.
+        """
+
+        ack_received = False
+        def timeout ():
+            yield 'teardown', time.time() + 10, None
+
+        while not ack_received:
+            self.session.send(Message.TEARDOWN)
+            try:
+                for socket, msg in self.poll(timeout()):
+                    # XXX: verify sender addr
+                    if socket != self.server:
+                        log.error("poll on invalid socket: %s", socket)
+                        continue
+
+                    self.recv(msg)
+                    #print('!!msg:%s' % msg)
+                    ack_received = True
+
+            except pubsub.udp.Timeout as timeout:
+                # timeout
+                print('!timeout:%s' % timeout)
 
     def __str__ (self):
         return str(self.server)

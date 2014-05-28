@@ -107,6 +107,11 @@ class ClientSession (pubsub.protocol.Session):
         if self.magic == 0x42:
             # XXX: parse old-style update?
             sensor_type, sensor_id, update = pubsub.sensors.parse(update)
+
+            log.info("%s:%d: %s", sensor_type, sensor_id, update)
+            
+            # enqueue
+            self.published.append((sensor_type, sensor_id, update))
                 
         elif self.magic == 0x43:
             # unpack new-style update
@@ -114,17 +119,16 @@ class ClientSession (pubsub.protocol.Session):
             if update:
                 for sensor_key, update in update.items():
                     sensor_type, sensor_id = pubsub.sensors.parse_sensor_key(sensor_key)
+            
+                    log.info("%s:%d: %s", sensor_type, sensor_id, update)
+            
+                    # enqueue
+                    self.published.append((sensor_type, sensor_id, update))
             else:
-                sensor_type = None
-                sensor_id = None
+                log.info("")
         else:
             raise Exception("%s: unknown magic for publish syntax: %d" % (self, self.magic, ))
         
-        log.info("%s:%d: %s", sensor_type, sensor_id, update)
-
-        # enqueue
-        self.published.append((sensor_type, sensor_id, update))
-
     def recv_teardown (self, response):
         """
             Process a teardown-ack from the server.

@@ -15,9 +15,9 @@ from threading import Thread, Event
 
 import logging; log = logging.getLogger('pubsub.server')
 
-MIN_PUBACK_TIMEOUT = 3.0
-MAX_PUBACK_TIMEOUT = 4.0
-MAX_MISSED_ACKS = 2
+MIN_PUBACK_TIMEOUT = 9.0
+MAX_PUBACK_TIMEOUT = 11.0
+MAX_MISSED_ACKS = 3
 
 class ServerSensor:
     """

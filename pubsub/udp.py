@@ -2,6 +2,7 @@ import errno
 import socket
 import select
 import time
+import random
 
 import logging; log = logging.getLogger('pubsub.udp')
 
@@ -14,6 +15,7 @@ class Socket (object):
     """
 
     SIZE = 1500
+    DROP_RATE = 0.00
 
     @classmethod
     def connect (cls, host, port, **opts):
@@ -60,7 +62,8 @@ class Socket (object):
         """
             Send buf, addr from socket.
         """
-
+        if random.random() < self.DROP_RATE:
+            return
         if addr:
             self.sock.sendto(buf, addr)
         else:

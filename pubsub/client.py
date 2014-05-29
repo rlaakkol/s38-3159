@@ -34,7 +34,7 @@ class ClientSession (pubsub.protocol.Session):
         self.published = []
 
         self.last_publish = time.time()
-        self.MAX_PUBLISH_INTERVAL = 30.0
+        self.MAX_PUBLISH_INTERVAL = 3*10.0
 
     def query_subscribe (self):
         """

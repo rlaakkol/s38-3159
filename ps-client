@@ -12,7 +12,8 @@ def main (args):
         Publish-Subscribe client.
     """
 
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__,
+        formatter_class=argparse.RawTextHelpFormatter)
 
     pubsub.args.parser(parser)
     pubsub.logger.parser(parser, component='client')
@@ -24,9 +25,9 @@ def main (args):
     parser.add_argument('-L', '--list', action='store_true',
             help="Query for available sensors")
     parser.add_argument('-a', '--aggregate', metavar='AGGREGATE',
-            help="The type of aggregation to use. Supported types per sensor: " \
-            "last: asd, device, gps, temp; max: gps, temp; min: gps, temp; " \
-            "avg: gps,temp; stddev: gps,temp")
+            help="The aggregation method use.\nSupported methods per sensor:\n" \
+            "last:\tasd, device, gps, temp \nmax:\tgps, temp \nmin:\tgps, temp\n" \
+            "avg:\tgps, temp\nstddev:\tgps, temp")
     parser.add_argument('-i', '--interval', metavar='INTERVAL', type=int,
             help="Aggregation interval")
     parser.add_argument('-S', '--step', metavar='STEP', type=int, 

@@ -1,0 +1,72 @@
+﻿S-38.3159 Assignment 1 Diary
+2014-01-27
+* subscribe full state sync
+   * subscribe:                -> all
+   * subscribe: []                -> none
+   * subscribe: [ … ]        -> update list of subscriptions
+* server timeouts sensor updates
+   * maximum interval = ???
+      * 60s?
+* implementation
+   * python3 + event
+* notify
+   * only maintain latest state
+   * idempotent
+
+2014-01-28
+* prototype
+* fixed-length bit header with jsonish payload
+* unreliable in-order delivery of idempotent state
+
+2014-01-29
+* writing out the doc
+* discussing protocol details
+        
+2014-01-30
+   * discussed protocol details (server & client timeouts and unsubscribing)
+
+2014-02-03
+   * discussed further details about specification and continued writing 
+   the specification
+2014-02-07
+   * Implement protocol encoding
+
+2014-02-09
+   * Fix handling of quoted binary data in jsonish
+   * Implement server’s client state, with recvseq handling and sending acks
+   * Implement client state, with sendseq handling and receiving acks 
+   with retransmit timeouts
+2014-02-26
+   * Designed prototype NAT discovery behaviour
+2014-02-27
+   * Discussed implications of new ambient noise sensor
+   * Discussed implications of aggregation features
+   * Discussed design of aggregation features
+   * pepeightified code
+2014-03-04
+   * ASD(F): does not really change anything
+   * TODO: test perf of server in scenario Z
+   * Aggregation should not require changes to packet format, only SUBSCRIBE 
+   JSON payload changes syntax
+   * non-aggregated subscriptions are a special-case of the aggregation syntax
+   * Do all aggregations queries include some given interval?
+   * Changes to publish response
+   * drop data_size
+   * list of sensor-dicts?
+   * Optional handshaking for available aggregation methods, which are 
+   sensor(type?)-specific
+   * Flags
+   * Non-acknowledgement flag
+   * Compression flag for gzipping payload
+2014-03-07
+   * Discussed aggregation message format
+   * JSON based
+   * Discussed protocol security
+   * DDos attacks are a major threat
+2014-03-10
+   * Drop teardown timeout
+   * Touchup docs
+2014-03-25
+   * Version 2 encoding, bcompat
+   * compression
+   * logging

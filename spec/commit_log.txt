@@ -1,0 +1,258 @@
+2014-05-29: ps-client: improve aggregation method help message
+2014-05-28: pubsub.client: increase client timeout
+2014-05-28: pubsub.server: hackhack ServerClient keepalive logic initialization
+2014-05-28: pubsub.client: handle logging/enqueue of publish message variants
+2014-05-28: pubsub.server: only consider clients which are positively subscribed
+to sensors, not those specifically unsubscribed from sensors
+2014-05-28: small cleanup vol2
+2014-05-28: small cleanup
+2014-05-28: basic teardown functionality
+2014-05-28: ps-client: added a little extra time to MAX_PUBLISH_INTERVAL
+2014-05-28: pubsub.client: make MAX_PUBLISH_INTERVAL adjustable to prevent
+timeouts when aggregating sensors
+2014-05-28: Merge branch 'master' of github.com:rlaakkol/s38-3159
+Conflicts:
+pubsub/server.py
+2014-05-28: implemented keepalive and noack functionality. also session removal
+on timeout on both sides.
+2014-05-27: pubsub.server: change sensor timeouts to use built-in timeout
+mechanism
+2014-05-27: ps-client: added aggregation method validation and help about
+supported methods
+2014-05-27: pubsub.server: add proper step support and improved under/over
+handling
+2014-05-27: ps-client: added check for interval and step dividability
+2014-05-26: pubsub.server: add support for aggregation methods
+2014-05-24: pubsub.server: add support for aggregation intervals and 'last' type
+aggregation
+2014-05-24: ps-client: add support for displaying aggregated publishes
+2014-05-23: pubsub.server: add support for under/over aggregation for temp and
+gps sensors
+2014-05-23: ps-client: change aggregation argument parsing
+2014-05-22: pubsub.client: added client side support for aggregation
+2014-05-20: pubsub.server: improve comments related to sensor timeout handling
+2014-05-20: pubsub.server: add sensor timeout handling
+2014-05-13: TODOs
+2014-05-13: pubsub.server: send subscribe-response/update messages
+2014-05-13: pubsub.protocol: set retransmit state for stateful replies as
+well...
+2014-05-13: clean up handling of stateless queries, using a separate
+pubsub.protocol.Session.query() to handle timeouts on the client
+2014-05-13: sensor update parsing for both server and client, with fixed sever
+sensor keys; server/client support for old v1 publish format
+2014-05-12: Merge Client Timeout, ServerSensor changes.
+2014-04-29: pubsub.server: added support for subscribing to sensors which appear
+after server start
+2014-04-24: pubsub.client/server: refactor protocol logic into common
+pubsub.protocol.Session; this means that Client gains ackseq'ing capabilities
+and Server sendseq
+2014-04-24: v2 publish message payload format. TODO: error handling...
+2014-04-24: pubsub.server: changed ServerClient to store sensors in a dict to
+enable v2 protocol changes
+2014-04-24: pubsub.logger: changed log directory creation to make
+intermediate-level directories
+2014-04-24: Merge branch 'keepalive'
+Conflicts:
+pubsub/client.py
+pubsub/server.py
+2014-04-24: Merge branch 'logging'
+2014-04-24: Removed coding style note about extra whitespace
+2014-04-20: timeouts via exceptions
+2014-04-12: pubsub: removed spaces before colons in function declarations and
+if-clauses
+2014-04-02: zigbee: restore slides aaltologo
+2014-03-25: server: loggers.logger(...)-based logging of ServerSensor's and
+ServerClient's
+2014-03-25: pubsub.logger: flush logfile
+2014-03-25: ps-client: use new LoggerMain logging
+2014-03-25: pubsub.logger: command-line argparse, LoggerMain, direct
+tab-separated-fields log()
+2014-03-25: pubsub.udp: Socket sockname/peername()
+2014-03-25: Merge branch 'master' into logging
+Conflicts:
+pubsub/client.py
+pubsub/server.py
+spec/payload.txt
+2014-03-25: pubsub.server: compat client magic from recv(msg.magic) to
+send(magic=...)
+2014-03-25: pubsub.protocol: build() MAGIC_V1 messages
+2014-03-25: pubsub.protocol: implement protocol v2 encoding changes
+2014-03-25: wip on keepalive...
+2014-03-24: groupwork/zigbee: removed an unnecessary bullet point
+2014-03-24: scale blaa bla
+2014-03-24: intro
+2014-03-24: zigbee app layer
+2014-03-24: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-24: intro; disable logo for dev
+2014-03-24: groupwork/zigbee: citation for network graph
+2014-03-24: ceritifcation, zigbee scale
+2014-03-24: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-24: groupwork/zigbee: added picture of physical layer
+2014-03-24: Moar 802.15.4
+2014-03-24: groupwork/zigbee: added picture file too...
+2014-03-24: groupwork/zigbee: moved network picture to new slide
+2014-03-24: groupwork/zigbee: network structure graph
+2014-03-24: cleanup 802.15 titles
+2014-03-24: zigbee blaa blaa blaa
+2014-03-24: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-24: groupwork/zigbee: cleanup phy/link slides to be more relevant to
+zigbee
+2014-03-24: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-24: groupwork/zigbee: more IEEE 802.15.4 stuff
+2014-03-24: groupwork/zigbee: compress slides, split layers
+2014-03-24: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-24: groupwork/zigbee: IEEE 802.15.4 stuff
+2014-03-24: groupwork/zigbee: title
+2014-03-24: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-24: groupwork/zigbee: added slide template
+2014-03-11: slides2: gps over/under example
+2014-03-11: slides2: fragmentation example
+2014-03-11: slides: drop examples verbatim font size
+2014-03-11: slides2: aggregation: SUBSCRIBE can be a dict
+2014-03-11: slides2: asd: no reliable transport
+2014-03-11: slides2: new publish format and aggregation parameters
+2014-03-11: fragmentation cleanup, headerfmt figure, security consideration
+2014-03-11: slides2: rearrange slides, add ADS slide, and conclude in ASDF
+2014-03-11: spec/slides2: titlefix
+2014-03-10: spec/doc: fixed small syntax error
+2014-03-10: spec: touch up security considerations, include query ASDF padding
+2014-03-10: Figures/subscribe_normal: updated five-way handshake
+2014-03-10: clarify subscribe protocol, updated semantics for three-way
+handshake
+2014-03-10: fix N-flag semantics in message types, change C-flag to mean zlib
+DECOMPRESS instead of gzip
+2014-03-10: reindent spec/messages.tex table
+2014-03-10: spec something for seq wraparound on 2^31
+2014-03-10: fix title casing
+2014-03-10: spec/doc: fixup subscribe-response
+2014-03-10: spec/slides: cleanup and added notes about security
+2014-03-10: removed unnecessary timeout from teardown
+2014-03-10: spec/slides: fixed errors preventing compilation
+2014-03-10: spec/doc: specified timeout values and corrected some typos
+2014-03-10: spec/doc: added note about sender sequence number and its wraparound
+2014-03-10: spec/doc: added clarification about network byte order and flags
+2014-03-10: magic explained
+2014-03-10: spec/doc: changed client shorthand from C to Cl
+2014-03-10: Merge branch 'master' of github.com:rlaakkol/s38-3159
+Conflicts:
+spec/doc.tex
+2014-03-07: spec/doc: updated header flag value description
+2014-03-07: spec/doc: added note about three-way handshake when subscribing
+2014-03-07: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-07: updated header, initialized slides, changed message table and doc to
+reflect changes in header
+2014-03-07: Merge branch 'master' of github.com:rlaakkol/s38-3159
+Conflicts:
+spec/doc.tex
+2014-03-07: doc/spec: added section about security considerations
+2014-03-07: updated header, initialized slides
+2014-03-07: spec/doc: add toc
+2014-03-07: spec/doc: aggregation expressions section
+2014-03-07: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-07: spec/doc: removed payload examples from message descriptions
+2014-03-07: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-07: spec/doc: add payload-format section
+2014-03-07: removed payloads from msc-figs
+2014-03-07: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-03-07: spec/paylod: examples of S/P payloads syntax
+2014-03-07: spec/paylod: examples of S/P payloads syntax
+2014-03-04: wip on server and udp main loop to enable exceptions for timeouts
+2014-02-27: pep8ificationization
+2014-02-27: groupwork/nat: added NAT notes
+2014-02-27: updated sensor submodule
+2014-02-26: groupwork/nat: added NAT notes
+2014-02-21: pubsub.client: removed erroneous comment
+2014-02-21: pubsub.client: added PID to logfile name
+2014-02-21: pubsub.server: moved log initiliazation to ps-server
+2014-02-20: pubsub.client: added client logging
+2014-02-20: pubsub.server: finished server logging
+2014-02-19: pubsub.server: implemented first phase of server logging
+2014-02-18: pubsub.server: added SIGINT handler and sensor.list file reading
+2014-02-12: spec/review1: title and rewording
+2014-02-12: client: quickfix publish recv sendtime handling
+2014-02-12: spec/review1: subtimeout
+2014-02-11: spec/review1 slides
+2014-02-10: groupwork/robustness: improved slides
+2014-02-10: groupwork/robustness: yadda yadda
+2014-02-10: initial slideset
+2014-02-09: pubsub.client: handle timeouts/responses for seqless queries
+2014-02-09: pubsub.client: retransmit state on timeouts, handle acks
+2014-02-09: pubsub.protocol: Message.type_name for out-of-Message type logging
+2014-02-09: pubsub.client: use Polling to implement send timeouts
+2014-02-09: pubsub.server: use pubsub.udp.Polling, and update for new socket
+recv yield
+2014-02-09: pubsub.protocol: include recv addr in Message.addr, instead of
+yielding them separately
+2014-02-09: pubsub.sensors: do not yield msg addr; unused
+2014-02-09: pubsub.udp: Polling class for mainloop, with optional timeout
+support
+2014-02-09: pubsub.jsonish: implement true/false/null consts
+2014-02-09: ps-client: fix default behaviour in case of no sensors given to sub
+all
+2014-02-09: pubsub.client: fix recv return, payload=[], info logging
+2014-02-09: TODO: update jsonish todo
+2014-02-09: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-02-09: Fixed quote parsing and Unicode escapes
+2014-02-09: Fixed server to use empty set instead of boolean for client sensors
+2014-02-09: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-02-09: pubsub.client: implement query/subscribe behaviour
+2014-02-09: pubsub.server: recvseq handling
+2014-02-09: pubsub.protocol: rename ack_seq to ackseq
+2014-02-09: pubsub.args: change --debug to be per-logger
+2014-02-09: pubsub.jsonish: fix parsing of empty messages
+2014-02-09: Changed build_string to yield JSON strings
+2014-02-09: pubsub.protocol: support 64k UDP messages
+2014-02-09: pubsub.server: handle client-specific message-processing errors
+2014-02-09: pubsub.sensors: bump up UDP message size to support camera messages
+2014-02-09: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-02-09: pubsub.udp: warn and drop truncated udp messages
+2014-02-09: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-02-09: Improved jsonish string parsing
+2014-02-09: pubsub.server: move message type handling out of Server, and move
+sensor-client mapping into Server
+2014-02-09: pubsub.server: simplified ServerClient sensors model
+2014-02-09: pubsub.server: ServerSensor, ServerClient state, with complicated
+subscription mappings
+2014-02-09: pubsub.udp: separate addrname() for str(sockaddr)
+2014-02-09: pubsub.Sensors: rename Sensors to just Transport, since the actual
+sensor state is in the Server
+2014-02-09: TODO: server/client logging
+2014-02-09: README: codestyle indent vim modeline
+2014-02-09: README: code style
+2014-02-09: move pubsub TODO
+2014-02-09: README
+2014-02-07: pubsub: implement protocol encoding
+2014-02-07: move packet handling from server/client to a separate
+udp.Socket/sensors.Socket/protocol.Transport class hierarchy
+2014-02-07: jsonish: docdoc missing features
+2014-02-07: spec/slides: last-minute notes..
+2014-02-04: fixed sequence numbers in publish fig
+2014-02-04: Merge branch 'master' of github.com:rlaakkol/s38-3159
+2014-02-04: separated labels for publish fig
+2014-02-04: spec: commit submitted v1 doc
+2014-02-04: spec/slides: add teardown slide/msg
+2014-02-04: spec/slides: add teardown slide/msg
+2014-02-04: doc: use pdf figures with centering and textwidth
+2014-02-04: slides: use pdf figures
+2014-02-04: spec: Makefile for pdflatex/mscgen
+2014-02-04: slides: drop skeleton message type slides
+2014-02-04: slides: input messages table
+2014-02-04: slides: disable aaltologo for moar better compilez
+2014-02-04: import spec doc from writelatex
+2014-02-04: pngs
+2014-02-04: figures visible
+2014-02-04: initial slide commit
+2014-02-03: mscgen picture stuff
+2014-02-03: mscgen sources for pics
+2014-01-28: client: yield messages from loop() and print out on cli interface
+2014-01-28: added sensor submodule
+2014-01-27: server: filter client updates on client sensor list
+2014-01-27: client: fix ParseError
+2014-01-27: server: fix ParseError handling, parse publish message fields, send
+client publishes
+2014-01-27: client: log server sent messages, and handle server publish messages
+2014-01-27: jsonish: fix empty list/dict handling; rename build_bytes
+2014-01-27: client: implement subscribe send
+2014-01-27: server: implement message recv
+2014-01-27: jsonish: parse/build protocol messages
+2014-01-27: project structure and command-line interface skeleton

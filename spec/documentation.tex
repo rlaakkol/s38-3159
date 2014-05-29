@@ -1,0 +1,86 @@
+\documentclass[a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\usepackage[ELEC]{aaltologo}
+\usepackage{verbatim}
+\usepackage[bf,small]{caption}
+\usepackage[toc,page]{appendix}
+
+\begin{document}
+% Titlepage
+\input{documentation-cover.tex}
+
+\tableofcontents
+\newpage
+
+\section{Implementation status}
+The header format and messages types are implemented by the specification.
+The sequence number wrap around is not implemented. The subscribe-query is done
+as specified by the specification but subscription update and unsubscribing
+are not implemented.
+
+Publishing is done according to the specification, but the keep-alive (NoAck
+unset) publish messages from the server should have contained the values from
+the subscribed device sensors.
+
+% Header format:
+%     No changes
+
+% Message types:
+%     No changes
+
+% Message exchange:
+%     Subscribe-query:
+%         No changes
+%     Subscribe:
+%         No changes, updating subscription and unsubscribing not implemented.
+%     Publish:
+%         According to the spec, the keep-alive (NoAck unset) publish messages from the server should have contained the values from the subscribed device sensors 
+
+\section{Packet loss testing}
+
+\section{Testing scenario Z}
+We tested the ``scenario Z'' by creating a shell script
+for starting the sensors and then running one server and one client. If all
+sensors where running, the client was unable receive any messages from the
+server causing the server to time out. When one camera and audio sensor along
+with the other sensor types where running, the sensor received the \emph{publish}
+messages correctly. Thus we can conclude that running too many (at least five
+camera and seven audio sensors) simultaneous camera and audio sensors consume
+all of the server's processing time.
+
+\section{Lessons learnt}
+We would likely have done most things the same way if we had to the assignment
+again from scratch but naturally some things would have been changed. The most
+common thing was that certain values or semantics in the specification were
+missing or unclear. One example is the retransmission timeout for \emph{teardown}
+messages sent by the client. Also the semantics for the aggregation methods
+were unspecified and some aggregation methods for the camera and audio sensors
+could have been added. 
+
+% Design:
+% - Specify default values for all timeouts, particularly teardown
+%   - Can the timeouts be changed?
+% - Specify semantics for aggregation expressions
+% - Add aggregation expressions also for other sensors, e.g. camera and asd
+
+\section{Learning diary}
+The learning diary consists mostly of matters relating to the design and the
+assignment 1 implementation of the protocol. The diary is shown below.
+
+\verbatiminput{AssignmentDiary.txt}
+
+The implementation progress can be be seen from the commit log of our Git
+repository. It is included in Appendix \ref{lst:commit_log}.
+
+\clearpage
+\begin{appendices}
+  \section{Git commit log}\label{lst:commit_log}
+  %\footnotesize
+  \verbatiminput{commit_log.txt}
+  %\normalsize
+\end{appendices}
+
+\end{document}

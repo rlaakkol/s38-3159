@@ -8,6 +8,8 @@
 \usepackage[bf,small]{caption}
 \usepackage[toc,page]{appendix}
 
+\usepackage{pdfpages}
+
 \begin{document}
 % Titlepage
 \input{documentation-cover.tex}
@@ -70,10 +72,10 @@ could have been added.
 The learning diary consists mostly of matters relating to the design and the
 assignment 1 implementation of the protocol. The diary is shown below.
 
-\verbatiminput{AssignmentDiary.txt}
+The detailed implementation progress can be be seen from the commit log of our
+Git repository. It is included in Appendix \ref{lst:commit_log}.
 
-The implementation progress can be be seen from the commit log of our Git
-repository. It is included in Appendix \ref{lst:commit_log}.
+\input{AssignmentDiary.tex}
 
 \clearpage
 \begin{appendices}

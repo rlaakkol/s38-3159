@@ -1,4 +1,8 @@
-all: doc.pdf slides.pdf
+all: documentation.pdf doc.pdf slides.pdf
+
+documentation.pdf: \
+	documentation-cover.tex \
+	AssignmentDiary.tex commit_log.txt
 
 doc.pdf: \
 	doc-cover.tex headerfmt.txt messages.tex \
@@ -10,6 +14,15 @@ slides.pdf: \
 
 %.pdf: %.tex
 	pdflatex $*
+
+%.tex: %.txt
+	pandoc -t latex -o $@ -f markdown $<
+
+AssignmentDiary.tex: AssignmentDiary.txt
+	pandoc -t latex -f markdown $< | sed 's/section/section*/' > $@
+
+%.pdf: %.txt
+	pandoc -o $@ -f markdown $<
 
 figures/%.svg: figures/%.msc
 	mscgen -T svg -o $@ $<

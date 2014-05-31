@@ -30,13 +30,9 @@ Both modules use the same \texttt{pubsub.protocol} module which implements the p
 The UDP transport (including the multiplexing reactor with timeout scheduling) is implemented in \texttt{pubsub.udp}.
 The JSONish format used for building/parsing protocol message payloads, as well as parsing sensor updates, is implemented in \texttt{pubsub.jsonish}.
 
-\section{Implementation issues}
-
-We feel that Python was an excellent choice for the implementation, and got off to a strong start, having a basic functional prototype (without any header syntax or protocol semantics) as a starting point before even finishing the revision 1 specification.
-Implementing the basic UDP mechanics and protocol syntax (encoding) was straightforward, and let us concentrate on the actual protocol semantics.
-
-The \texttt{pubsub.server} and \texttt{pubsub.protocol} modules do implement backwards-compatibility based on the magic contained in the packets sent by the client, supporting both revision 2 clients (magic \texttt{0x43}) as well as revision 1 clients (magic \texttt{0x42}) simultaneously.
-However, while the \texttt{pusub.client} partially implements support for revision 1 (magic \texttt{0x42}) messages, this support is incomplete and would require some form of explicit flag (\texttt{\--\--revision-1}) or fallback mechanism to communicate with an older server, as the origional server implemention will silently discard any magic \texttt{0x43} messages.
+The \texttt{pubsub.server} (and \texttt{pubsub.protocol}) module implements backwards-compatibility for older revision 2 clients based on the packet header magic field, thus the server should support both revision 2 clients (magic \texttt{0x43}) as well as older revision 1 clients (magic \texttt{0x42}) simultaneously.
+The client only supports the newer revision 2 protocol.
+The older client implementation (tagged in git as \texttt{v1.0}) can be used for testing the server backwards-compatibility.
 
 \section{Implementation vs specification differences}
 
@@ -69,6 +65,8 @@ The keep-alive \textbf{publish (w/ NoAck unset)} messages from the server should
 The client does not transmit any count of received \textbf{PUBLISH} messages in the \textbf{publish-ack} \textit{seq} field.
 The specification should be changed to use a separate payload field instead.
 The server does not implement any congestion control for sent \textbf{PUBLISH} messages either, beyond the keepalive timeout mechanism for terminating the client session.
+
+The internal server aggregation implementation only supports a single sensor per client, but this is not caused by any protocol limitation.
 
 \subsection{\textbf{TEARDOWN}}
 The client and server implement \textbf{TEARDOWN} support.
@@ -114,19 +112,21 @@ camera and seven audio sensors) simultaneous camera and audio sensors consume
 all of the server's processing time.
 
 \section{Lessons learnt: what we would do differently}
-We would likely have done most things the same way if we had to the assignment
-again from scratch but naturally some things would have been changed. The most
-common thing was that certain values or semantics in the specification were
-missing or unclear. One example is the retransmission timeout for \emph{teardown}
-messages sent by the client. Also the semantics for the aggregation methods
-were unspecified and some aggregation methods for the camera and audio sensors
-could have been added. 
 
-% Design:
-% - Specify default values for all timeouts, particularly teardown
-%   - Can the timeouts be changed?
-% - Specify semantics for aggregation expressions
-% - Add aggregation expressions also for other sensors, e.g. camera and asd
+We feel that Python was an excellent choice for the implementation, and got off to a strong start, having a basic functional prototype (without any header syntax or protocol semantics) as a starting point before even finishing the revision 1 specification.
+Implementing the basic UDP mechanics and protocol syntax (encoding) was straightforward, and let us concentrate on the actual protocol semantics.
+
+While we were able to implement backwards-compatibility between revision in the server, we should have given more consideration to client backwards-compatibility when designing the original specification.
+Implementing backwards-compatibility support in the client is difficult due to the origional server implementation silently discarding any messages with an unknown magic (\texttt{0x43}).
+Thus, while the \texttt{pusub.client} implements support for receiving revision 1 (magic \texttt{0x42}) messages, communicating with a revision 1 server would require some form of explicit flag (\texttt{\--\--revision-1}) or fallback mechanism in order to choose the correct revision for messages being sent.
+This would be less of an issue if the revision 1 server were to return some explicit reject/protocol-downgrade response to client messages with a newer magic.
+
+Certain values or semantics in the specification were also left unspecified, particularly the retransmission timeouts for request messages sent by the client and server. A fixed value of 10 seconds was chosen for the implementation, but this could have been optimized based on observed RTT etc.
+
+The specified mechanism for congestion control of \textbf{PUBLISH} messages sent by the server was also left vauge.
+The specified behaviour of the client for the \textit{seq} field of the \textbf{publish-ack} messages was not logical, and some payload-based mechanism should have been used instead.
+
+The semantics of the aggregation methods for different sensor types were unspecified, and some aggregation methods for the camera and audio sensors could have been added. 
 
 \section{Learning diary}
 The learning diary consists mostly of matters relating to the design and the

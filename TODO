@@ -6,27 +6,29 @@
 
 ## pubsub.protocol
 * Sequence wraparound
+* Handling of responses to noack messages? Shouldn't happen, but currently just silently dropped
+* Colesce retry of pending response into ack for old sequence for three-way exchanges
+** server recv seq=X -> send seq=Y ack=X
+*** send packet lost
+** client times out -> retry seq=X
+** server recv seq=X -> send ack=X
+** server times out -> retry seq=Y
+*** could instead bundle the pending retry of seq=Y into the ack=X message..
 
 ## pubsub.server
 * sensor timeouts
-** remove sensor from subscriptions if no updates after >60s
+** remove sensor from client subscriptions if no updates within 60s
 * client aggregation expressions
-** at the minimum, parse them and return -1..
-** ideally implement aggregation logic in ServerClient.sensor_update()
-* client publish ack/noack
-** implement `self.send(Message.PUBLISH, payload, ack=False)` -> `Message(noack=True)`
-** implement `if msg.noack: ...` handling in pubsub.protocol.Session.recv()
-** server timeouts for sending periodic client PUBLISH's with ack=True
-** server timeouts for disconnecting client on missing PUBLISH-ack's
-* teardown support
+** refactor to separate ServerAggregation object to support multiple aggregations per client
+** cleanup code
+* client keepalives
+** change to use Session timeout logic
+** implement keepalive timeout in Server poll_timeouts(), not in send_publish()
+** XXX: current keepalives don't work for empty subscription sets / no publishes
+* fix timeout on empty subscribe set
+** initialize ServerClient state to send keepalives
 
 ## pubsub.client
-* three-way SUBSCRIBE handshake
-** may actually work as-is
 * PUBLISH responses
 ** transmit info about received messages..?
-* PUBLISH timeout
-** disconnect if no PUBLISH message for e.g. 1min
-* teardown support
-** intercept KeyboardInterrupt and teardown session..
-** implement pubsub.protocol.Session.teardown()?
+

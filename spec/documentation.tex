@@ -17,7 +17,7 @@
 \tableofcontents
 \newpage
 
-\section{Program structure}
+\section{Implementation structure}
 The our implementation consists of the binaries: client (ps-client) and server
 (ps-server). Both are backwards compatible, supporting protocol revisions for
 assignments 1 and 2. The server maintains state for subscribed clients and
@@ -27,7 +27,9 @@ messages sent by the server.
 A shared library is used by both binaries. The library contains classes for
 the client, server, sensors, parsing and data transmission.
 
-\section{Implementation status}
+\section{Implementation issues}
+
+\section{Implementation vs specification differences}
 The header format and messages types are implemented by the specification.
 The sequence number wrap around is not implemented. The subscribe-query is done
 as specified by the specification but subscription update and unsubscribing
@@ -49,8 +51,10 @@ the subscribed device sensors.
 %     Publish:
 %         According to the spec, the keep-alive (NoAck unset) publish messages from the server should have contained the values from the subscribed device sensors 
 
-\section{Packet loss testing}
+\section{Testing scenarios and metrics}
 
+
+\subsection{Testing packet loss vs Freshness metric}
 The effect of packet loss on the protocol and the implementation was tested by 
 making the section of the code that handles the sending of UDP packets (utilized
 by both the server and the client) drop packets with an adjustable rate.
@@ -76,7 +80,7 @@ for timeouts according to the specification, a timeout disconnect first happened
 at a packet loss rate of 50\%. Even at 40\% the maximum amount of consecutive
 packets lost was 6.
 
-\section{Testing scenario Z}
+\subsection{Testing scenario Z sensor set}
 We tested the ``scenario Z'' by creating a shell script
 for starting the sensors and then running one server and one client. If all
 sensors where running, the client was unable receive any messages from the
@@ -86,7 +90,7 @@ messages correctly. Thus we can conclude that running too many (at least five
 camera and seven audio sensors) simultaneous camera and audio sensors consume
 all of the server's processing time.
 
-\section{Lessons learnt}
+\section{Lessons learnt: what we would do differently}
 We would likely have done most things the same way if we had to the assignment
 again from scratch but naturally some things would have been changed. The most
 common thing was that certain values or semantics in the specification were

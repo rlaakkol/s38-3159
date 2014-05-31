@@ -112,9 +112,9 @@ def main (args):
                     for upd in update:
                         print("{s_type}\t{id}\t{value}".format(s_type=s_type, 
                             id=id, value=upd[s_type]))
+
     except KeyboardInterrupt:
         client.teardown()
-        log.error("exit on KeyboardInterrupt")
         return 0
 
     else:

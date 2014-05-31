@@ -129,18 +129,37 @@ class ClientSession (pubsub.protocol.Session):
         else:
             raise Exception("%s: unknown magic for publish syntax: %d" % (self, self.magic, ))
         
-    def recv_teardown (self, response):
+    def teardown (self):
         """
-            Process a teardown-ack from the server.
+            Initiate a teardown to the server.
         """
-         # TODO exit
-        log.info('Closing client')
+
+        log.info("")
+
+        self.send(Message.TEARDOWN)
+
+    def teardown_complete (self):
+        """
+            Test for the teardown-request completing.
+        """
+        
+        # XXX: we have send() it and have recv()'d the ack
+        return self.sendseq.get(Message.TEARDOWN) and not self.pending_timeout(Message.TEARDOWN)
+
+    def recv_teardown (self, payload):
+        """
+            Process a teardown-request from the server.
+        """
+
+        log.info("Surprise TEARDOWN from server")
+         
+        # XXX
         sys.exit(0)
 
     RECV = {
             Message.SUBSCRIBE:  recv_subscribe,
             Message.PUBLISH:    recv_publish,
-            Message.TEARDOWN:   recv_teardown
+            Message.TEARDOWN:   recv_teardown,
     }
 
 class Client (pubsub.udp.Polling):
@@ -179,6 +198,7 @@ class Client (pubsub.udp.Polling):
 
     SEND_TIMEOUT = {
             Message.SUBSCRIBE:  10.0,
+            Message.TEARDOWN:   10.0,
     }
 
     def poll_timeouts (self):
@@ -266,29 +286,18 @@ class Client (pubsub.udp.Polling):
 
     def teardown (self):
         """
-            Send teardown.
+            Send teardown, and return once complete.
         """
+        
+        log.info("teardown...")
+        self.session.teardown()
 
-        ack_received = False
-        def timeout ():
-            yield 'teardown', time.time() + 10, None
-
-        while not ack_received:
-            self.session.send(Message.TEARDOWN)
-            try:
-                for socket, msg in self.poll(timeout()):
-                    # XXX: verify sender addr
-                    if socket != self.server:
-                        log.error("poll on invalid socket: %s", socket)
-                        continue
-
-                    self.recv(msg)
-                    #print('!!msg:%s' % msg)
-                    ack_received = True
-
-            except pubsub.udp.Timeout as timeout:
-                # timeout
-                print('!timeout:%s' % timeout)
+        # communicate
+        for msg in self:
+            if self.session.teardown_complete():
+                break
+        
+        log.info("teardown complete")
 
     def __str__ (self):
         return str(self.server)

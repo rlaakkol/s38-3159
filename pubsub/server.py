@@ -371,7 +371,6 @@ class ServerClient (pubsub.protocol.Session):
 
     def handle_teardown (self, payload):
         self.torndown = True
-        self.send(Message.TEARDOWN, ackseq=1)
     
     def send (self, *args, **opts):
         """
@@ -474,6 +473,8 @@ class Server (pubsub.udp.Polling):
         log.debug("%s: %s", pubsub.udp.addrname(addr), msg)
         
         # stateful message?
+        # XXX:  only create state for SUBSCRIBE messages...
+        #       e.g. TEARDOWN requests should just be handled statelessly unless state already exists
         if msg.seq or msg.ackseq:
             # maintain client state
             if addr in self.clients:
@@ -502,12 +503,9 @@ class Server (pubsub.udp.Polling):
             except Exception as ex:
                 # XXX: drop message...
                 log.exception("ServerClient %s: %s", pubsub.udp.addrname(addr), msg)
-        elif msg.type == Message.TEARDOWN:
-            # TODO: Teardown from unknown client
-            pass
 
         else:
-            log.warning("Unknown Message from unknown client %s: %s", addr, msg)
+            log.warning("%s: invalid stateless message: %s", pubsub.udp.addrname(addr), msg)
 
     def client_subscribe_query (self, addr, sensors=None):
         """

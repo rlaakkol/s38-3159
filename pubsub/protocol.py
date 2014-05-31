@@ -411,6 +411,13 @@ class Session:
 
         return msg
 
+    def pending_timeout (self, type):
+        """
+            Return pending timeout for given message type, or None if not pending.
+        """
+        
+        return self.sendtime.get(type)
+
     def retry (self, type):
         """
             Handle timeout for given message type by retransmitting the request.

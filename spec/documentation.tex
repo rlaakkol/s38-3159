@@ -32,7 +32,7 @@ The JSONish format used for building/parsing protocol message payloads, as well 
 
 The \texttt{pubsub.server} (and \texttt{pubsub.protocol}) module implements backwards-compatibility for older revision 2 clients based on the packet header magic field, thus the server should support both revision 2 clients (magic \texttt{0x43}) as well as older revision 1 clients (magic \texttt{0x42}) simultaneously.
 The client only supports the newer revision 2 protocol.
-The older client implementation (tagged in git as \texttt{v1.0}) can be used for testing the server backwards-compatibility.
+The older client implementation (tagged in Git as \texttt{v1.0}) can be used for testing the server backwards-compatibility.
 
 \section{Implementation vs specification differences}
 
@@ -49,13 +49,13 @@ The five-way \textbf{SUBSCRIBE} handshake for mitigating DoS reflection attacks 
 The \textbf{subscribe-query}/\textbf{subscribe-queryresponse} exchange is implemented by the server in a stateless fashion, with the client handling timeout/retransmission state (assuming a single in-flight query with no other messages being exchanged).
 
 The three-way \textbf{subscribe-request}/\textbf{subscribe-response}/\textbf{subscribe-ack} exchange is used for session establishment between the client and server.
-The client handles retransmission of lost \textbf{subscribe-request} messages per the spec.
+The client handles retransmission of lost \textbf{subscribe-request} messages per the specification.
 The server handling of \textbf{subscribe-response} retransmissions differs slightly in that while the initial \textbf{subscribe-response} is a combined ack/response, a lost \textbf{subscribe-response} will result in a ack-only message for the client-retransmitted \textbf{subscribe-request} and a separate retransmitted \textbf{subscribe-response} message without any ack-seq.
 This variant can however be considered equivalent per the protocol semantics, if somewhat inefficient.
 
 While the \textbf{pubsub.client} and \textbf{pubsub.server} implementation would theoretically support \textbf{subscribe-request} updates to change the subscription set for a running session, the \texttt{ps-client} interface does not provide any runtime mechanism for changing the subscription set, nor has this behaviour been tested.
 
-The \textbf{subscribe-update}/\textbf{subscribe-ack} exchange is implemented for the server-initiated addition of new sensors to a sesion implicitly subscribed to all sensors, and the client will log the addition/removal of sensors to its subscription set.
+The \textbf{subscribe-update}/\textbf{subscribe-ack} exchange is implemented for the server-initiated addition of new sensors to a session implicitly subscribed to all sensors, and the client will log the addition/removal of sensors to its subscription set.
 The server does not, however, implement updates for removing sensors that have timed out.
 
 \subsection{\textbf{PUBLISH}}
@@ -70,7 +70,7 @@ The internal server aggregation implementation only supports a single sensor per
 
 \subsection{\textbf{TEARDOWN}}
 The client and server implement \textbf{TEARDOWN} support.
-The client will send a \textbf{teardown} message and wait for a \textbf{teardown-ack} when terminating with \texttt{SIGINT} (Ctrl-c), retransmitting the \textbf{teardown} as required.
+The client will send a \textbf{teardown} message and wait for a \textbf{teardown-ack} when terminating with \texttt{SIGINT} (Ctrl-C), retransmitting the \textbf{teardown} as required.
 
 \section{Testing scenarios and metrics}
 
@@ -106,7 +106,7 @@ We tested the ``scenario Z'' by creating a shell script
 for starting the sensors and then running one server and one client. If all
 sensors where running, the client was unable receive any messages from the
 server causing the server to time out. When one camera and audio sensor along
-with the other sensor types where running, the sensor received the \emph{publish}
+with the other sensor types where running, the sensor received the \textbf{publish}
 messages correctly. Thus we can conclude that running too many (at least five
 camera and seven audio sensors) simultaneous camera and audio sensors consume
 all of the server's processing time.
@@ -117,13 +117,13 @@ We feel that Python was an excellent choice for the implementation, and got off 
 Implementing the basic UDP mechanics and protocol syntax (encoding) was straightforward, and let us concentrate on the actual protocol semantics.
 
 While we were able to implement backwards-compatibility between revision in the server, we should have given more consideration to client backwards-compatibility when designing the original specification.
-Implementing backwards-compatibility support in the client is difficult due to the origional server implementation silently discarding any messages with an unknown magic (\texttt{0x43}).
+Implementing backwards-compatibility support in the client is difficult due to the original server implementation silently discarding any messages with an unknown magic (\texttt{0x43}).
 Thus, while the \texttt{pusub.client} implements support for receiving revision 1 (magic \texttt{0x42}) messages, communicating with a revision 1 server would require some form of explicit flag (\texttt{\--\--revision-1}) or fallback mechanism in order to choose the correct revision for messages being sent.
 This would be less of an issue if the revision 1 server were to return some explicit reject/protocol-downgrade response to client messages with a newer magic.
 
 Certain values or semantics in the specification were also left unspecified, particularly the retransmission timeouts for request messages sent by the client and server. A fixed value of 10 seconds was chosen for the implementation, but this could have been optimized based on observed RTT etc.
 
-The specified mechanism for congestion control of \textbf{PUBLISH} messages sent by the server was also left vauge.
+The specified mechanism for congestion control of \textbf{PUBLISH} messages sent by the server was also left vague.
 The specified behaviour of the client for the \textit{seq} field of the \textbf{publish-ack} messages was not logical, and some payload-based mechanism should have been used instead.
 
 The semantics of the aggregation methods for different sensor types were unspecified, and some aggregation methods for the camera and audio sensors could have been added. 

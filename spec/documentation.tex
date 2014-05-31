@@ -18,38 +18,61 @@
 \newpage
 
 \section{Implementation structure}
-The our implementation consists of the binaries: client (ps-client) and server
-(ps-server). Both are backwards compatible, supporting protocol revisions for
-assignments 1 and 2. The server maintains state for subscribed clients and
-available sensors. The client sends subscribe queries and receives \emph{publish}
-messages sent by the server.
 
-A shared library is used by both binaries. The library contains classes for
-the client, server, sensors, parsing and data transmission.
+We implemented the server and client portions of our publish-subscribe specification using the \textbf{Python 3.2} programming language.
+
+The implementation provides \texttt{ps-server} and \texttt{ps-client} scripts based on a shared \texttt{pubsub} library package.
+The server receives sensor updates and client messages, maintains state for all active sensors and client sessions, handles publishing and aggregation of sensor updates to subscribed clients, and responds to stateless client queries.
+The client supports sending stateless queries (listing available sensors), and establishing a subscription session for a given set of sensors (defaulting to all sensors).
+
+The executable scripts are responsible for command-line argument handling and setting up sensor logging, whereas the actual high-level protocol semantics (\textbf{SUBSCRIBE}, \textbf{PUBLISH}, \textbf{TEARDOWN}) and related state are implemented in the \texttt{pubsub.client} and \texttt{pubsub.server} modules.
+Both modules use the same \texttt{pubsub.protocol} module which implements the protocol syntax and generic non-message-type-specific protocol semantics, including request acknowledgements/responses and timeouts/retransmissions.
+The UDP transport (including the multiplexing reactor with timeout scheduling) is implemented in \texttt{pubsub.udp}.
+The JSONish format used for building/parsing protocol message payloads, as well as parsing sensor updates, is implemented in \texttt{pubsub.jsonish}.
 
 \section{Implementation issues}
 
+We feel that Python was an excellent choice for the implementation, and got off to a strong start, having a basic functional prototype (without any header syntax or protocol semantics) as a starting point before even finishing the revision 1 specification.
+Implementing the basic UDP mechanics and protocol syntax (encoding) was straightforward, and let us concentrate on the actual protocol semantics.
+
+The \texttt{pubsub.server} and \texttt{pubsub.protocol} modules do implement backwards-compatibility based on the magic contained in the packets sent by the client, supporting both revision 2 clients (magic \texttt{0x43}) as well as revision 1 clients (magic \texttt{0x42}) simultaneously.
+However, while the \texttt{pusub.client} partially implements support for revision 1 (magic \texttt{0x42}) messages, this support is incomplete and would require some form of explicit flag (\texttt{\--\--revision-1}) or fallback mechanism to communicate with an older server, as the origional server implemention will silently discard any magic \texttt{0x43} messages.
+
 \section{Implementation vs specification differences}
-The header format and messages types are implemented by the specification.
-The sequence number wrap around is not implemented. The subscribe-query is done
-as specified by the specification but subscription update and unsubscribing
-are not implemented.
 
-Publishing is done according to the specification, but the keep-alive (NoAck
-unset) publish messages from the server should have contained the values from
-the subscribed device sensors.
+The protocol encoding is fully implemented per both specification revisions, including both revision 1/2 binary header formats, the revision 2 extended \textbf{SUBSCRIBE} syntax for aggregation expressions, and both revision 1/2 \texttt{PUBLISH} formats.
 
-% Header format:
-%     No changes
-% Message types:
-%     No changes
-% Message exchange:
-%     Subscribe-query:
-%         No changes
-%     Subscribe:
-%         No changes, updating subscription and unsubscribing not implemented.
-%     Publish:
-%         According to the spec, the keep-alive (NoAck unset) publish messages from the server should have contained the values from the subscribed device sensors 
+Message sequence numbers are implemented by the the low-level \texttt{pubsub.protocol} module for all message types, including both allocation of sequence numbers for sent requests as well as automatic acknowledgements/discards of received (duplicate or out-of-order) sequence numbers.
+The same logic provides for timeouts/retransmissions of unacknowledged requests (including stateless queries as a special case).
+However, sequence number wraparound is not implemented, and the session is always established with a starting \texttt{seq=1}.
+
+\subsection{\textbf{SUBSCRIBE}}
+The \textbf{SUBSCRIBE} implementation follows the specification, implementing all \textbf{subscribe-*} message variants.
+The five-way \textbf{SUBSCRIBE} handshake for mitigating DoS reflection attacks in the session setup phase is not implemented.
+
+The \textbf{subscribe-query}/\textbf{subscribe-queryresponse} exchange is implemented by the server in a stateless fashion, with the client handling timeout/retransmission state (assuming a single in-flight query with no other messages being exchanged).
+
+The three-way \textbf{subscribe-request}/\textbf{subscribe-response}/\textbf{subscribe-ack} exchange is used for session establishment between the client and server.
+The client handles retransmission of lost \textbf{subscribe-request} messages per the spec.
+The server handling of \textbf{subscribe-response} retransmissions differs slightly in that while the initial \textbf{subscribe-response} is a combined ack/response, a lost \textbf{subscribe-response} will result in a ack-only message for the client-retransmitted \textbf{subscribe-request} and a separate retransmitted \textbf{subscribe-response} message without any ack-seq.
+This variant can however be considered equivalent per the protocol semantics, if somewhat inefficient.
+
+While the \textbf{pubsub.client} and \textbf{pubsub.server} implementation would theoretically support \textbf{subscribe-request} updates to change the subscription set for a running session, the \texttt{ps-client} interface does not provide any runtime mechanism for changing the subscription set, nor has this behaviour been tested.
+
+The \textbf{subscribe-update}/\textbf{subscribe-ack} exchange is implemented for the server-initiated addition of new sensors to a sesion implicitly subscribed to all sensors, and the client will log the addition/removal of sensors to its subscription set.
+The server does not, however, implement updates for removing sensors that have timed out.
+
+\subsection{\textbf{PUBLISH}}
+The basic \textbf{PUBLISH} mechanism is implemented according to the specification.
+The keep-alive \textbf{publish (w/ NoAck unset)} messages from the server should have contained the values from the subscribed device-type sensors, but are transmitted with either an empty payload, or in the form of a normal \textbf{publish} message.
+
+The client does not transmit any count of received \textbf{PUBLISH} messages in the \textbf{publish-ack} \textit{seq} field.
+The specification should be changed to use a separate payload field instead.
+The server does not implement any congestion control for sent \textbf{PUBLISH} messages either, beyond the keepalive timeout mechanism for terminating the client session.
+
+\subsection{\textbf{TEARDOWN}}
+The client and server implement \textbf{TEARDOWN} support.
+The client will send a \textbf{teardown} message and wait for a \textbf{teardown-ack} when terminating with \texttt{SIGINT} (Ctrl-c), retransmitting the \textbf{teardown} as required.
 
 \section{Testing scenarios and metrics}
 

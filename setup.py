@@ -8,8 +8,6 @@ setup(
     name            = 'pubsub',
     version         = __version__,
     description     = 'Publish-Subscribe protocol implementation',
-    author          = 'Greg Ward',
-    author_email    = 'gward@python.net',
 
     packages        = [
         'pubsub',

@@ -2,7 +2,7 @@ all: documentation.pdf doc.pdf slides.pdf
 
 documentation.pdf: \
 	documentation-cover.tex \
-	AssignmentDiary.tex commit_log.txt
+	AssignmentDiary.tex commit_log.txt plots/plotdata.pdf
 
 doc.pdf: \
 	doc-cover.tex headerfmt.txt messages.tex \
@@ -32,3 +32,6 @@ figures/%.pdf: figures/%.svg
 
 figures/%.png: figures/%.msc
 	mscgen -T svg -o $@ $<
+
+plots/%.pdf: plots/%.dat plots/gp.plot
+	gnuplot -e "outfile='$@'; datafile='$<'" plots/gp.plot

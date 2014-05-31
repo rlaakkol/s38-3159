@@ -270,7 +270,7 @@ class Session:
                 sendtime = self.sendtime.pop(msg.type, None)
                 self.sendpayload.pop(msg.type, None)
 
-                log.debug("%s: %s:%d: ack @ %fs", self, msg.type_str, msg.ackseq, (time.time() - sendtime) if sendtime else '...')
+                log.debug("%s: %s:%d: ack @ %s", self, msg.type_str, msg.ackseq, "%fs" % (time.time() - sendtime, ) if sendtime else '...')
         
         elif self.sendtime.get(msg.type) and not self.sendseq.get(msg.type):
             # clear timeout for stateless query response
@@ -328,7 +328,7 @@ class Session:
                 )
                 
                 # response?
-                if payload:
+                if payload is not None:
                     # ack + response
                     seq = self.sendseq[msg.type] + 1
         

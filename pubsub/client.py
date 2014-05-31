@@ -190,10 +190,10 @@ class Client (pubsub.udp.Polling):
             if sendtime:
                 timeout = sendtime + self.SEND_TIMEOUT[type]
 
-                yield type, timeout, None
-
-        yield Message.PUBLISH, self.session.last_publish + \
-            self.session.MAX_PUBLISH_INTERVAL, None
+                yield type, timeout
+        
+        # separate keepalive timer
+        yield Message.PUBLISH, self.session.last_publish + self.session.MAX_PUBLISH_INTERVAL
 
     def __iter__ (self):
         """
@@ -219,12 +219,15 @@ class Client (pubsub.udp.Polling):
 
             except pubsub.udp.Timeout as timeout:
                 # timeout
-                if timeout.timer == Message.PUBLISH:
-                    # Server timed out
-                    log.error("Server timed out")
+                type = timeout.timer
+
+                if type == Message.PUBLISH:
+                    # keepalive timed out
+                    log.error("Server keepalive timed out")
                     sys.exit(-1)
+
                 else:
-                    self.session.retry(timeout.timer)
+                    self.session.retry(type)
 
     def query (self):
         """

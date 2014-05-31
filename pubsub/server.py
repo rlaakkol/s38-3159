@@ -415,7 +415,6 @@ class Server (pubsub.udp.Polling):
         log.info("Listening for client subscribe messages on %s", self.client_port)
 
         self.loggers = loggers
-        self.timeouts = []
 
     def sensor (self, msg):
         """
@@ -454,7 +453,6 @@ class Server (pubsub.udp.Polling):
             Handle newly added ServerSensor.
         """
         
-        self.timeouts.append(str(sensor))
         # push new ServerSensor to ServerClients 
         for client in self.clients.values():
             client.sensor_add(sensor)
@@ -529,17 +527,29 @@ class Server (pubsub.udp.Polling):
     def poll_timeouts (self):
         """
             Collect timeouts for polling.
+
+            We handle mixed ServerSensor and ServerClient instances for timeouts, thus the timer is a tuple of the form:
+                (ServerSensor, None)            - for sensor timeouts
+                (ServerClient, Message.TYPE)    - for client message timeouts
         """
-        for sensor in self.timeouts:
-            yield sensor, time.time() + 60, None
+
+        # sensors
+        for sensor in self.sensors:
+            # XXX: use sensor.update_timeout for proper timeout intervals, not some arbitrary 60s quiet period across all UDP sockets
+            yield (sensor, None), time.time() + 60.0
+        
+        # clients
         for addr, client in self.clients.items():
+            # protocol.Session timeouts for sent message types
             for type, sendtime in client.sendtime.items():
                 if sendtime:
                     timeout = sendtime + client.SEND_TIMEOUT[type]
 
-                    yield type, timeout, None
+                    yield (client, type), timeout
+            
+            # separate keepalive timeout handling
             if not client.ack_pending:
-                yield Message.PUBLISH, client.last_ackreq + MAX_PUBACK_TIMEOUT, client
+                yield (client, Message.PUBLISH), client.last_ackreq + MAX_PUBACK_TIMEOUT
 
 
     def __call__ (self):
@@ -574,7 +584,7 @@ class Server (pubsub.udp.Polling):
                         break
 
                 for socket, msg in self.poll(self.poll_timeouts()):
-                    # process
+                    # process messages
                     if socket == self.sensor_port:
                         # pubsub.sensors.Transport -> dict
                         self.sensor(msg)
@@ -587,22 +597,28 @@ class Server (pubsub.udp.Polling):
                         log.error("%s: message on unknown socket: %s", transport, msg)
 
             except pubsub.udp.Timeout as timeout:
-                log.info("Publish timed out %s: %s", timeout.timer, timeout.session)
-                # TODO: handle sensor/client timeouts
-                if timeout.timer == Message.PUBLISH:
+                instance, type = timeout.timer
 
-                    timeout.session.send_publish(None, timeout=True)
+                if isinstance(instance, ServerSensor):
+                    sensor = instance
+                    
+                    # TODO: sensor_del() to update client subscriptions
+                    log.warning("%s: remove sensor after timeout", sensor)
+
+                    del self.sensors[str(sensor)]
+
+                elif isinstance(instance, ServerClient):
+                    client = instance
+
+                    if type == Message.PUBLISH:
+                        log.info("%s: publish keepalive", client)
+
+                        client.send_publish(None, timeout=True)
+                    else:
+                        log.info("%s: timeout %s", client, type)
+                        client.retry(type)
                 else:
-                    # handle sensor timeouts
-                    timeout_sensors = []
-                    for sensor in self.sensors:
-                        if str(sensor) == str(timeout).strip("'"):
-                            timeout_sensors.append(sensor)
-                    # remove timeouted sensors
-                    for sensor in timeout_sensors:
-                        log.warning("%s: removed sensor after timeout" % sensor)
-                        del self.timeouts[self.timeouts.index(str(sensor))]
-                        del self.sensors[sensor]
+                    log.error("unknown timeout: %s[%s]", instance, type)
 
 class TimedExecutor(Thread):
     """

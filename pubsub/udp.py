@@ -180,35 +180,41 @@ class Polling:
         """
             Run one polling cycle.
 
-                timeouts        - sequence of (timer, time) values for timeouts
+                timeouts        - sequence of (timer, timeout) timeouts
+                                  timer is an arbitrary value, used for `raise Timeout(timer)`, accessible as timeout.timer.
+                                  timeout is some `time.time() + dt` in the future.
         """
-
+        
+        # schedule shortest timeout
         poll_timer = None
         poll_timeout = None
         
         if timeouts:
-            # select shortest timeout
-            for timer, timeout, session in timeouts:
+            for timer, timeout in timeouts:
                 if not poll_timeout or timeout < poll_timeout:
                     poll_timer = timer
                     poll_timeout = timeout
-
+        
+        # poll() with or without timeout
         if poll_timeout:
             timeout = (poll_timeout - time.time()) * 1000
 
             if timeout < 0:
-                log.warning("immediate timeout: %s@%f = %f", poll_timer, poll_timeout, timeout)
+                log.warning("immediate timeout: %s@%f = %f: %s", poll_timer, poll_timeout, timeout, poll_timer)
+                
+                # trigger Timeout without actually poll()'ing
+                poll = False
             else:
                 log.debug("%f...", timeout)
 
-            poll = self._poll.poll(timeout)
+                poll = self._poll.poll(timeout)
         else:
             log.debug("...")
 
             poll = self._poll.poll()
-
-
+        
         if poll:
+            # yield events
             for fd, event in poll:
                 socket = self._poll_sockets[fd]
                 
@@ -220,15 +226,16 @@ class Polling:
                     yield socket, recv
 
         else:
-            log.debug("%s: timeout", poll_timer)
+            # raise timeout
+            timeout = Timeout(poll_timer)
 
-            # timeout
-            raise Timeout(poll_timer, session)
+            log.debug("timeout: %s", timeout)
+
+            raise timeout
 
 class Timeout(Exception):
-    def __init__(self, value, session=None):
-        self.timer = value
-        self.session = session
+    def __init__(self, timer):
+        self.timer = timer
 
     def __str__(self):
-        return repr(self.timer)
+        return str(self.timer)

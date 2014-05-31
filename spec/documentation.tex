@@ -17,6 +17,16 @@
 \tableofcontents
 \newpage
 
+\section{Program structure}
+The our implementation consists of the binaries: client (ps-client) and server
+(ps-server). Both are backwards compatible, supporting protocol revisions for
+assignments 1 and 2. The server maintains state for subscribed clients and
+available sensors. The client sends subscribe queries and receives \emph{publish}
+messages sent by the server.
+
+A shared library is used by both binaries. The library contains classes for
+the client, server, sensors, parsing and data transmission.
+
 \section{Implementation status}
 The header format and messages types are implemented by the specification.
 The sequence number wrap around is not implemented. The subscribe-query is done
@@ -29,10 +39,8 @@ the subscribed device sensors.
 
 % Header format:
 %     No changes
-
 % Message types:
 %     No changes
-
 % Message exchange:
 %     Subscribe-query:
 %         No changes
@@ -80,9 +88,7 @@ Git repository. It is included in Appendix \ref{lst:commit_log}.
 \clearpage
 \begin{appendices}
   \section{Git commit log}\label{lst:commit_log}
-  %\footnotesize
   \verbatiminput{commit_log.txt}
-  %\normalsize
 \end{appendices}
 
 \end{document}

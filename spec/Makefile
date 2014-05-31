@@ -13,7 +13,7 @@ slides.pdf: \
 	figures/subscribe_normal.pdf figures/subscribe_lost.pdf figures/publish_normal.pdf figures/teardown.pdf
 
 %.pdf: %.tex
-	pdflatex $*
+	latexmk -pdf $*
 
 %.tex: %.txt
 	pandoc -t latex -o $@ -f markdown $<

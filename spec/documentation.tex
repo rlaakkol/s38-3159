@@ -50,12 +50,20 @@ the subscribed device sensors.
 %         According to the spec, the keep-alive (NoAck unset) publish messages from the server should have contained the values from the subscribed device sensors 
 
 \section{Packet loss testing}
+
+The effect of packet loss on the protocol and the implementation was tested by making the section of the code that handles the sending of UDP packets (utilized by both the server and the client) drop packets with an adjustable rate. Different loss rates were tested by running the server with a single temperature sensor and one client for 1-2 minutes each. The results are visible in figure \ref{fig:lossdata}.
+
 \begin{figure}
 \center{
     \includegraphics[width=\textwidth]{plots/plotdata.pdf}
 }
-\caption{foobar}
+\caption{Average and maximum values for time between consecutive updates arriving at the client with one temperature sensor.} \label{fig:lossdata}
 \end{figure}
+
+The image shows the average and maximum time between consecutive sensor updates. As the temperature sensor sends updates at a constant 1 update per second rate, the maximum time datapoints nicely visualize the maximum amount of concecutive úpdates (with payload) lost.
+
+As there are no retransmissions for publish messages in the protocol, the amount of lost updates is the same as the loss ratio. With the smallest possible values for timeouts according to the spec, a timeout disconnect first happened at a packet loss rate of 50\%. Even at 40\% the maximum amount of consecutive packets lost was 6.
+
 \section{Testing scenario Z}
 We tested the ``scenario Z'' by creating a shell script
 for starting the sensors and then running one server and one client. If all

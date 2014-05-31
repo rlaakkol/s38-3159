@@ -35,3 +35,6 @@ figures/%.png: figures/%.msc
 
 plots/%.pdf: plots/%.dat plots/gp.plot
 	gnuplot -e "outfile='$@'; datafile='$<'" plots/gp.plot
+
+commit_log.txt:
+	git log --date=short --pretty=format:"%w(80)%cd: %B" > $@
